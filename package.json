@@ -1,0 +1,43 @@
+{
+  "name": "blind-peer-cli",
+  "version": "0.0.0",
+  "description": "CLI for blind-peer",
+  "main": "bin.js",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run format:check"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holepunchto/blind-peer-cli.git"
+  },
+  "keywords": [
+    "blind",
+    "peer",
+    "cli"
+  ],
+  "author": "Holepunch",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/holepunchto/blind-peer-cli/issues"
+  },
+  "homepage": "https://github.com/holepunchto/blind-peer-cli#readme",
+  "dependencies": {
+    "autobase-discovery": "^1.3.2",
+    "b4a": "^1.7.3",
+    "blind-peer": "^2.9.5",
+    "graceful-goodbye": "^1.3.3",
+    "hyper-instrument": "^3.0.1",
+    "hypercore-crypto": "^3.6.1",
+    "hypercore-id-encoding": "^1.3.0",
+    "paparam": "^1.9.1",
+    "pino": "^10.1.0",
+    "safety-catch": "^1.0.2",
+    "tiny-byte-size": "^1.1.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.7.4",
+    "prettier-config-holepunch": "^2.0.0"
+  }
+}
