@@ -12,6 +12,10 @@
     "blind-peer": "bin.js",
     "blind-peer-bare": "bare-bin.js"
   },
+  "files": [
+    "bin.js",
+    "bare-bin.js"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/holepunchto/blind-peer-cli.git"
