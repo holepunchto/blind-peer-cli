@@ -18,6 +18,12 @@ Run a blind peer:
 blind-peer
 ```
 
+Or, to run on bare:
+
+```
+blind-peer-bare
+```
+
 ### Command Line Options
 
 - `--storage|-s [path]` - Storage path, defaults to ./blind-peer
