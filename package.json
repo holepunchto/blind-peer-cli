@@ -34,18 +34,25 @@
   "dependencies": {
     "autobase-discovery": "^1.3.2",
     "b4a": "^1.7.3",
-    "blind-peer": "^2.9.5",
+    "blind-peer": "^3.0.0",
     "graceful-goodbye": "^1.3.3",
     "hyper-instrument": "^3.0.1",
     "hypercore-crypto": "^3.6.1",
     "hypercore-id-encoding": "^1.3.0",
     "paparam": "^1.9.1",
     "pino": "^10.1.0",
+    "pino-bare": "^0.0.1",
     "safety-catch": "^1.0.2",
     "tiny-byte-size": "^1.1.0"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
     "prettier-config-holepunch": "^2.0.0"
+  },
+  "imports": {
+    "pino": {
+      "bare": "pino-bare",
+      "default": "pino"
+    }
   }
 }
