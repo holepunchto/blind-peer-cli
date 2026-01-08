@@ -4,7 +4,7 @@ const { command, flag } = require('paparam')
 const goodbye = require('graceful-goodbye')
 const idEnc = require('hypercore-id-encoding')
 const Instrumentation = require('hyper-instrument')
-const RegisterClient = require('autobase-discovery/client/register')
+// const RegisterClient = require('autobase-discovery/client/register')
 const safetyCatch = require('safety-catch')
 const byteSize = require('tiny-byte-size')
 const pino = require('pino')
@@ -248,7 +248,8 @@ const cmd = command(
     )
 
     if (flags.autodiscoveryRpcKey) {
-      const autodiscoveryRpcKey = idEnc.decode(flags.autodiscoveryRpcKey)
+      throw new Error('autobase discovery temp not supported')
+      /* const autodiscoveryRpcKey = idEnc.decode(flags.autodiscoveryRpcKey)
       const seed = idEnc.decode(flags.autodiscoverySeed)
       const serviceName = flags.autodiscoveryServiceName || SERVICE_NAME
       const registerClient = new RegisterClient(autodiscoveryRpcKey, blindPeer.swarm.dht, seed)
@@ -268,6 +269,7 @@ const cmd = command(
         .finally(() => {
           registerClient.close().catch(safetyCatch)
         })
+      */
     }
 
     if (flags.scraperPublicKey) {
