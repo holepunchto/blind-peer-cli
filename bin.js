@@ -144,6 +144,13 @@ const cmd = command(
     blindPeer.on('core-append', (core) => {
       logger.info(`Detected announced-core length update: ${coreToInfo(core, true)}`)
     })
+    blindPeer.on('core-client-mode-changed', (core, isClient) => {
+      if (isClient) {
+        logger.info(`Announced-core enabled client mode: ${coreToInfo(core, true)}`)
+      } else {
+        logger.info(`Announced-core disabled client mode: ${coreToInfo(core, true)}`)
+      }
+    })
 
     blindPeer.on('gc-start', ({ bytesToClear }) => {
       logger.info(
