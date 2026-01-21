@@ -23,16 +23,27 @@ RUN arch="${TARGETARCH:-$(uname -m)}" \
   && find node_modules -type d -name prebuilds \
   -exec sh -c 'for d in "$1"/*; do [ "$d" = "$1/$2" ] || rm -rf "$d"; done' _ {} "$keep" \;
 
-FROM node:bookworm-slim AS runtime
+FROM node:bookworm-slim AS bare-runtime
+ARG TARGETARCH
+RUN arch="${TARGETARCH:-$(uname -m)}" \
+  && case "$arch" in \
+  amd64|x86_64) bare_arch="x64" ;; \
+  arm64|aarch64) bare_arch="arm64" ;; \
+  *) bare_arch="$arch" ;; \
+  esac \
+  && npm install --prefix /tmp/bare-runtime "bare-runtime-linux-${bare_arch}" \
+  && install -D -m 0755 /tmp/bare-runtime/node_modules/bare-runtime-linux-${bare_arch}/bin/bare /bare/bin/bare
+
+FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PATH=/app/node_modules/.bin:$PATH
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends libatomic1 \
   && rm -rf /var/lib/apt/lists/*
 
+COPY --from=bare-runtime /bare/bin/bare /usr/local/bin/bare
 RUN useradd -u 2129 --create-home blind-peer \
   && mkdir -p /data \
   && chown -R blind-peer:blind-peer /data
@@ -44,7 +55,5 @@ VOLUME ["/data"]
 
 USER blind-peer
 
-
-
 # Default storage path can be overridden with args.
-ENTRYPOINT ["node", "/app/bin.js", "--storage", "/data"]
+ENTRYPOINT ["bare", "/app/bare-bin.js", "--storage", "/data"]
