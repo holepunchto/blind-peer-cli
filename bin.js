@@ -144,6 +144,16 @@ const cmd = command(
         logger.error(`Unexpected error while logging downgrade-announce: ${e.stack}`)
       }
     })
+    blindPeer.on('add-cores-downgrade-announce', ({ remotePublicKey }) => {
+      try {
+        logger.info(
+          `Downgraded announce for peer ${idEnc.normalize(remotePublicKey)} because the peer is not trusted)`
+        )
+      } catch (e) {
+        logger.error(`Unexpected error while logging add-cores-downgrade-announce: ${e.stack}`)
+      }
+    })
+
 
     blindPeer.on('announce-core', (core) => {
       logger.info(`Started announcing core ${coreToInfo(core, true)}`)
