@@ -154,7 +154,6 @@ const cmd = command(
       }
     })
 
-
     blindPeer.on('announce-core', (core) => {
       logger.info(`Started announcing core ${coreToInfo(core, true)}`)
     })
