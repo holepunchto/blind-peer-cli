@@ -93,8 +93,8 @@ const cmd = command(
     blindPeer.on('muxer-paired', (stream) => {
       logger.debug(`Paired muxer with peer ${streamToStr(stream)}`)
     })
-    blindPeer.on('muxer-error', (e) => {
-      logger.info(`Error while running the muxer protocol: ${e.stack}`)
+    blindPeer.on('muxer-error', (e, stream) => {
+      logger.info(`Error while running the muxer protocol: ${e.stack} ${streamToStr(stream)}`)
     })
     blindPeer.on('add-cores-received', (stream) => {
       logger.debug(`add-cores request received from peer ${streamToStr(stream)}`)
