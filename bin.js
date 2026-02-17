@@ -90,6 +90,19 @@ const cmd = command(
       logger.warn(`Error while flushing the db: ${e.stack}`)
     })
 
+    blindPeer.on('muxer-paired', (stream) => {
+      logger.debug(`Paired muxer with peer ${streamToStr(stream)}`)
+    })
+    blindPeer.on('muxer-error', (e, stream) => {
+      logger.info(`Error while running the muxer protocol: ${e.stack} ${streamToStr(stream)}`)
+    })
+    blindPeer.on('add-cores-received', (stream) => {
+      logger.debug(`add-cores request received from peer ${streamToStr(stream)}`)
+    })
+    blindPeer.on('add-cores-done', (stream) => {
+      logger.debug(`add-cores request handled from peer ${streamToStr(stream)}`)
+    })
+
     blindPeer.on('add-new-core', (record, _, stream) => {
       try {
         if (record.announce) {
@@ -129,6 +142,15 @@ const cmd = command(
         )
       } catch (e) {
         logger.error(`Unexpected error while logging downgrade-announce: ${e.stack}`)
+      }
+    })
+    blindPeer.on('add-cores-downgrade-announce', ({ remotePublicKey }) => {
+      try {
+        logger.info(
+          `Downgraded announce for peer ${idEnc.normalize(remotePublicKey)} because the peer is not trusted)`
+        )
+      } catch (e) {
+        logger.error(`Unexpected error while logging add-cores-downgrade-announce: ${e.stack}`)
       }
     })
 
