@@ -69,6 +69,14 @@ const cmd = command(
     '--auto-shutdown-minutes [auto-shutdown-minutes]',
     '(Temporary, Advanced) Automatically shut the process down after X minutes, with a variation of 20%'
   ),
+  flag(
+    '--top-k-peer-threshold [int]',
+    '(Advanced) Spike threshold for top-k tracking by peer (defaults to 100)'
+  ),
+  flag(
+    '--top-k-referrer-threshold [int]',
+    '(Advanced) Spike threshold for top-k tracking by referrer (defaults to 100)'
+  ),
   async function ({ flags }) {
     const debug = flags.debug
     const logger = pino({
@@ -90,7 +98,14 @@ const cmd = command(
       trustedPubKeys,
       maxBytes,
       port,
-      routerKey
+      routerKey,
+      topK: {
+        bucketCount: 6,
+        bucketTime: 10_000,
+        k: 5,
+        peerThreshold: flags.topKPeerThreshold || 100,
+        referrerThreshold: flags.topKReferrerThreshold || 100
+      }
     })
 
     blindPeer.on('flush-error', (e) => {
@@ -108,6 +123,12 @@ const cmd = command(
     })
     blindPeer.on('add-cores-done', (stream) => {
       logger.debug(`add-cores request handled from peer ${streamToStr(stream)}`)
+    })
+    blindPeer.topKByPeer.on('spike', (key, count) => {
+      logger.info(`top-k by peer spiked: key=${key} count=${count}`)
+    })
+    blindPeer.topKByReferrer.on('spike', (key, count) => {
+      logger.info(`top-k by referrrer spiked: key=${key} count=${count}`)
     })
 
     blindPeer.on('add-new-core', (record, _, stream) => {
