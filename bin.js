@@ -29,7 +29,12 @@ const cmd = command(
   ).multiple(),
   flag('--debug|-d', 'Enable debug mode (more logs)'),
   flag(
-    `--max-storage|-m [int]', 'Max storage usage, in Mb (defaults to ${DEFAULT_STORAGE_LIMIT_MB})`
+    '--max-storage|-m [int]',
+    `Max storage usage, in Mb (defaults to ${DEFAULT_STORAGE_LIMIT_MB})`
+  ),
+  flag(
+    '--router-key [router-key]',
+    'Public key of the blind peer router to use for peer resolution. Can be hex or z32.'
   ),
   flag(
     '--autodiscovery-rpc-key [autodiscovery-rpc-key]',
@@ -79,11 +84,13 @@ const cmd = command(
 
     const maxBytes = 1_000_000 * parseInt(flags.maxStorage || DEFAULT_STORAGE_LIMIT_MB)
     const trustedPubKeys = (flags.trustedPeer || []).map((k) => idEnc.decode(k))
+    const routerKey = flags.routerKey ? idEnc.decode(flags.routerKey) : null
 
     const blindPeer = new BlindPeer(storage, {
       trustedPubKeys,
       maxBytes,
-      port
+      port,
+      routerKey
     })
 
     blindPeer.on('flush-error', (e) => {
@@ -205,6 +212,7 @@ const cmd = command(
         `Trusted public keys:\n  -${[...blindPeer.trustedPubKeys].map(idEnc.normalize).join('\n  -')}`
       )
     }
+    if (routerKey) logger.info(`Router public key: ${idEnc.normalize(routerKey)}`)
 
     let instrumentation = null
     goodbye(async () => {
