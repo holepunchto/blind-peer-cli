@@ -15,6 +15,8 @@ const { version: ownVersion } = require('./package.json')
 
 const SERVICE_NAME = 'blind-peer'
 const DEFAULT_STORAGE_LIMIT_MB = 100_000
+const DEFAULT_TOP_K_PEER_THRESHOLD = 100
+const DEFAULT_TOP_K_REFERRER_THRESHOLD = 100
 
 const cmd = command(
   'blind-peer',
@@ -71,11 +73,11 @@ const cmd = command(
   ),
   flag(
     '--top-k-peer-threshold [int]',
-    '(Advanced) Spike threshold for top-k tracking by peer (defaults to 100)'
+    `(Advanced) Spike threshold for top-k tracking by peer (defaults to ${DEFAULT_TOP_K_PEER_THRESHOLD})`
   ),
   flag(
     '--top-k-referrer-threshold [int]',
-    '(Advanced) Spike threshold for top-k tracking by referrer (defaults to 100)'
+    `(Advanced) Spike threshold for top-k tracking by referrer (defaults to ${DEFAULT_TOP_K_REFERRER_THRESHOLD})`
   ),
   async function ({ flags }) {
     const debug = flags.debug
@@ -94,6 +96,9 @@ const cmd = command(
     const trustedPubKeys = (flags.trustedPeer || []).map((k) => idEnc.decode(k))
     const routerKey = flags.routerKey ? idEnc.decode(flags.routerKey) : null
 
+    const peerThreshold = flags.topKPeerThreshold || DEFAULT_TOP_K_PEER_THRESHOLD
+    const referrerThreshold = flags.topKReferrerThreshold || DEFAULT_TOP_K_REFERRER_THRESHOLD
+
     const blindPeer = new BlindPeer(storage, {
       trustedPubKeys,
       maxBytes,
@@ -103,8 +108,8 @@ const cmd = command(
         bucketCount: 6,
         bucketTime: 10_000,
         k: 5,
-        peerThreshold: flags.topKPeerThreshold || 100,
-        referrerThreshold: flags.topKReferrerThreshold || 100
+        peerThreshold,
+        referrerThreshold
       }
     })
 
