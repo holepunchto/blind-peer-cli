@@ -8,9 +8,12 @@ const Instrumentation = require('hyper-instrument')
 const safetyCatch = require('safety-catch')
 const byteSize = require('tiny-byte-size')
 const pino = require('pino')
+const ProtomuxRPCRouter = require('protomux-rpc-router')
+const defaultMiddleware = require('protomux-rpc-middleware')
 const b4a = require('b4a')
 const hypCrypto = require('hypercore-crypto')
 const BlindPeer = require('blind-peer')
+const BlindPeerAdminRpc = require('blind-peer/admin-rpc')
 const { version: ownVersion } = require('./package.json')
 
 const SERVICE_NAME = 'blind-peer'
@@ -241,7 +244,28 @@ const cmd = command(
     if (routerKey) logger.info(`Router public key: ${idEnc.normalize(routerKey)}`)
 
     let instrumentation = null
+
+    await blindPeer.ready() // needed to be able to access the swarm object
+
+    const adminRpcRouter = new ProtomuxRPCRouter()
+    adminRpcRouter.use(
+      defaultMiddleware({
+        logger: {
+          instance: logger
+        }
+      })
+    )
+
+    const adminRpc = new BlindPeerAdminRpc(blindPeer.swarm, adminRpcRouter, trustedPubKeys, {
+      ip: blindPeer.topKByIp,
+      referrer: blindPeer.topKByReferrer,
+      key: blindPeer.topKByPeer
+    })
+
+    await adminRpc.ready()
+
     goodbye(async () => {
+      await adminRpc.close()
       if (instrumentation) {
         logger.info('Closing instrumentation')
         await instrumentation.close()
@@ -361,6 +385,7 @@ const cmd = command(
       })
 
       blindPeer.registerMetrics(instrumentation.promClient)
+      adminRpcRouter.registerMetrics(instrumentation.promClient)
       instrumentation.registerLogger(logger)
       await instrumentation.ready()
     }
