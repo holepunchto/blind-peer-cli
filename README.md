@@ -30,6 +30,7 @@ blind-peer-bare
 - `--port|-p [int]` - DHT Port to try to bind to. Only relevant when that port is not firewalled. (defaults to a random port)
 - `--trusted-peer|-t [trusted-peer]` - Public key of a trusted peer (allowed to set announce: true). Can be specified multiple times.
 - `--router-key [router-key]` - Public key of the blind peer router to use for peer resolution. Can be hex or z32.
+- `--ip-ban-list-key [ip-ban-list-key]` - Public key of an IP ban list to subscribe to. Can be hex or z32. Can be specified multiple times.
 - `--debug|-d` - Enable debug mode (more logs). Can be specified multiple times.
 - `--max-storage|-m [int]` - Max storage usage, in Mb (defaults to 100000)
 - `--autodiscovery-rpc-key [autodiscovery-rpc-key]` - Public key where the autodiscovery service is listening. When set, the autodiscovery-seed must also be set. Can be hex or z32.
