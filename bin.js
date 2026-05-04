@@ -13,11 +13,29 @@ const b4a = require('b4a')
 const hypCrypto = require('hypercore-crypto')
 const BlindPeer = require('blind-peer')
 const { version: ownVersion } = require('./package.json')
+const health = require('./lib/health')
 
 const SERVICE_NAME = 'blind-peer'
 const DEFAULT_STORAGE_LIMIT_MB = 100_000
 const DEFAULT_TOP_K_PEER_THRESHOLD = 100
 const DEFAULT_TOP_K_REFERRER_THRESHOLD = 100
+const DEFAULT_HEALTH_FILE = '/tmp/blind-peer-health.json'
+const DEFAULT_HEARTBEAT_INTERVAL = 5000
+
+const healthcheckCommand = command(
+  'healthcheck',
+  flag('--health-file [path]', `Health file path (default ${DEFAULT_HEALTH_FILE})`),
+  async function ({ flags }) {
+    const filename = flags.healthFile || DEFAULT_HEALTH_FILE
+
+    if (await health.checkHealthCheckFile(filename)) {
+      console.log(JSON.stringify({ ok: true }))
+    } else {
+      console.error(`blind-peer is not ready: health file ${filename}`)
+      process.exit(1)
+    }
+  }
+)
 
 const cmd = command(
   'blind-peer',
@@ -89,6 +107,11 @@ const cmd = command(
     '--top-k-referrer-threshold [int]',
     `(Advanced) Spike threshold for top-k tracking by referrer (defaults to ${DEFAULT_TOP_K_REFERRER_THRESHOLD})`
   ),
+  flag(
+    '--health-file [path]',
+    `Write Kubernetes exec-probe health state to this path (default ${DEFAULT_HEALTH_FILE})`
+  ),
+  healthcheckCommand,
   async function ({ flags }) {
     const debug = flags.debug
     const logger = pino({
@@ -98,6 +121,7 @@ const cmd = command(
     logger.info('Starting blind peer')
 
     const logStreams = flags.logStreams
+    const healthFile = flags.healthFile || DEFAULT_HEALTH_FILE
 
     const storage = flags.storage || 'blind-peer'
     const activeCorestore = flags.activeCorestore || false
@@ -275,6 +299,8 @@ const cmd = command(
 
     let instrumentation = null
     goodbye(async () => {
+      if (healthInterval) clearInterval(healthInterval)
+      await health.deleteHealthCheckFile(healthFile)
       if (instrumentation) {
         logger.info('Closing instrumentation')
         await instrumentation.close()
@@ -336,10 +362,9 @@ const cmd = command(
     }
 
     await blindPeer.listen()
+    const localAddress = blindPeer.swarm.dht.localAddress()
 
-    logger.info(
-      `Blind peer listening, local address is ${blindPeer.swarm.dht.localAddress().host}:${blindPeer.swarm.dht.localAddress().port}`
-    )
+    logger.info(`Blind peer listening, local address is ${localAddress.host}:${localAddress.port}`)
     logger.info(
       `Bytes allocated: ${byteSize(blindPeer.digest.bytesAllocated)} of ${byteSize(blindPeer.maxBytes)}`
     )
@@ -398,6 +423,15 @@ const cmd = command(
       instrumentation.registerLogger(logger)
       await instrumentation.ready()
     }
+
+    await health.writeHealthCheckFile(healthFile)
+    const healthInterval = setInterval(
+      () => health.writeHealthCheckFile(healthFile),
+      DEFAULT_HEARTBEAT_INTERVAL
+    )
+    goodbye(() => {
+      clearInterval(healthInterval)
+    })
 
     logger.info(`Listening at ${idEnc.normalize(blindPeer.publicKey)}`)
     logger.info(`Encryption public key is ${idEnc.normalize(blindPeer.encryptionPublicKey)}`)

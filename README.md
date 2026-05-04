@@ -24,6 +24,12 @@ Or, to run on bare:
 blind-peer-bare
 ```
 
+Check the health file written by a running blind peer:
+
+```
+blind-peer healthcheck
+```
+
 ### Command Line Options
 
 - `--storage|-s [path]` - Storage path, defaults to ./blind-peer
@@ -39,6 +45,13 @@ blind-peer-bare
 - `--scraper-public-key [scraper-public-key]` - Public key of a dht-prometheus scraper. Can be hex or z32.
 - `--scraper-secret [scraper-secret]` - Secret of the dht-prometheus scraper. Can be hex or z32.
 - `--scraper-alias [scraper-alias]` - (optional) Alias with which to register to the scraper
+- `--health-file [path]` - Write Kubernetes exec-probe health state to this path. Defaults to `/tmp/blind-peer-health.json`.
+
+### Healthcheck Command
+
+`blind-peer healthcheck` exits with code `0` when the health file is fresh and the running blind peer has completed startup.
+
+- `--health-file [path]` - Health file path. Defaults to `/tmp/blind-peer-health.json`.
 
 ### Output
 
