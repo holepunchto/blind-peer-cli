@@ -6,7 +6,8 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "npm run format:check"
+    "test": "npm run format:check && lunte && brittle test/*.js",
+    "test:bare": "brittle-bare test/*.js"
   },
   "bin": {
     "blind-peer": "bin.js",
@@ -33,7 +34,7 @@
   "homepage": "https://github.com/holepunchto/blind-peer-cli#readme",
   "dependencies": {
     "b4a": "^1.7.3",
-    "blind-peer": "^3.5.0",
+    "blind-peer": "^3.6.1",
     "graceful-goodbye": "^1.3.3",
     "hyper-instrument": "^3.0.1",
     "hypercore-crypto": "^3.6.1",
@@ -41,17 +42,45 @@
     "paparam": "^1.9.1",
     "pino": "^9.9.5",
     "pino-bare": "^0.0.1",
-    "safety-catch": "^1.0.2",
+    "protomux-rpc-middleware": "^1.0.0",
+    "protomux-rpc-router": "^1.2.0",
     "tiny-byte-size": "^1.1.0"
   },
   "devDependencies": {
+    "bare-events": "^2.8.2",
+    "bare-path": "^3.0.0",
+    "bare-process": "^4.4.1",
+    "bare-subprocess": "^6.0.0",
+    "blind-peer-encodings": "^3.3.0",
+    "brittle": "^3.19.1",
+    "hyperdht": "^6.31.0",
+    "lunte": "^1.8.0",
+    "newline-decoder": "^1.0.2",
     "prettier": "^3.7.4",
-    "prettier-config-holepunch": "^2.0.0"
+    "prettier-config-holepunch": "^2.0.0",
+    "protomux-rpc": "^1.9.0",
+    "which-runtime": "^1.3.2"
   },
   "imports": {
+    "child_process": {
+      "bare": "bare-subprocess",
+      "default": "child_process"
+    },
+    "events": {
+      "bare": "bare-events",
+      "default": "events"
+    },
+    "path": {
+      "bare": "bare-path",
+      "default": "path"
+    },
     "pino": {
       "bare": "pino-bare",
       "default": "pino"
+    },
+    "process": {
+      "bare": "bare-process",
+      "default": "process"
     }
   }
 }
