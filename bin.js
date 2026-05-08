@@ -41,6 +41,10 @@ const cmd = command(
     'Public key of the blind peer router to use for peer resolution. Can be hex or z32.'
   ),
   flag(
+    '--ip-ban-list-key [ip-ban-list-key]',
+    'Public key of an IP ban list to subscribe to. Can be hex or z32. Can be more than 1.'
+  ).multiple(),
+  flag(
     '--autodiscovery-rpc-key [autodiscovery-rpc-key]',
     'Public key where the autodiscovery service is listening. When set, the autodiscovery-seed must also be set. Can be hex or z32.'
   ),
@@ -100,6 +104,7 @@ const cmd = command(
     const maxBytes = 1_000_000 * parseInt(flags.maxStorage || DEFAULT_STORAGE_LIMIT_MB)
     const trustedPubKeys = (flags.trustedPeer || []).map((k) => idEnc.decode(k))
     const routerKey = flags.routerKey ? idEnc.decode(flags.routerKey) : null
+    const ipBanListKeys = (flags.ipBanListKey || []).map((k) => idEnc.decode(k))
 
     const peerThreshold = flags.topKPeerThreshold || DEFAULT_TOP_K_PEER_THRESHOLD
     const referrerThreshold = flags.topKReferrerThreshold || DEFAULT_TOP_K_REFERRER_THRESHOLD
@@ -120,6 +125,7 @@ const cmd = command(
       port,
       routerKey,
       adminRouter: adminRpcRouter,
+      ipBanListKeys,
       topK: {
         bucketCount: 6,
         bucketTime: 10_000,
@@ -255,6 +261,11 @@ const cmd = command(
       )
     }
     if (routerKey) logger.info(`Router public key: ${idEnc.normalize(routerKey)}`)
+    if (ipBanListKeys.length > 0) {
+      logger.info(
+        `IP ban list public keys:\n  -${blindPeer.ipBanLists.map((list) => idEnc.normalize(list.key)).join('\n  -')}`
+      )
+    }
 
     let instrumentation = null
     goodbye(async () => {
