@@ -5,9 +5,10 @@ const goodbye = require('graceful-goodbye')
 const idEnc = require('hypercore-id-encoding')
 const Instrumentation = require('hyper-instrument')
 // const RegisterClient = require('autobase-discovery/client/register')
-const safetyCatch = require('safety-catch')
 const byteSize = require('tiny-byte-size')
 const pino = require('pino')
+const ProtomuxRPCRouter = require('protomux-rpc-router')
+const defaultMiddleware = require('protomux-rpc-middleware')
 const b4a = require('b4a')
 const hypCrypto = require('hypercore-crypto')
 const BlindPeer = require('blind-peer')
@@ -25,6 +26,7 @@ const cmd = command(
     '--port|-p [int]',
     'DHT Port to try to bind to. Only relevant when that port is not firewalled. (defaults to a random port)'
   ),
+  flag('--bootstrap [port]', 'Bootstrap port (only relevant for tests)'),
   flag(
     '--trusted-peer|-t [trusted-peer]',
     'Public key of a trusted peer (allowed to set announce: true). Can be more than 1.'
@@ -91,6 +93,9 @@ const cmd = command(
 
     const storage = flags.storage || 'blind-peer'
     const port = flags.port ? parseInt(flags.port) : null
+    const bootstrap = flags.bootstrap
+      ? [{ host: '127.0.0.1', port: parseInt(flags.bootstrap, 10) }]
+      : null
 
     const maxBytes = 1_000_000 * parseInt(flags.maxStorage || DEFAULT_STORAGE_LIMIT_MB)
     const trustedPubKeys = (flags.trustedPeer || []).map((k) => idEnc.decode(k))
@@ -99,11 +104,22 @@ const cmd = command(
     const peerThreshold = flags.topKPeerThreshold || DEFAULT_TOP_K_PEER_THRESHOLD
     const referrerThreshold = flags.topKReferrerThreshold || DEFAULT_TOP_K_REFERRER_THRESHOLD
 
+    const adminRpcRouter = new ProtomuxRPCRouter()
+    adminRpcRouter.use(
+      defaultMiddleware({
+        logger: {
+          instance: logger
+        }
+      })
+    )
+
     const blindPeer = new BlindPeer(storage, {
+      bootstrap,
       trustedPubKeys,
       maxBytes,
       port,
       routerKey,
+      adminRouter: adminRpcRouter,
       topK: {
         bucketCount: 6,
         bucketTime: 10_000,
