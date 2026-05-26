@@ -28,6 +28,10 @@ const cmd = command(
   ),
   flag('--bootstrap [port]', 'Bootstrap port (only relevant for tests)'),
   flag(
+    '--active-corestore',
+    'Use an active corestore (useful for blind peers dedicated to seeding)'
+  ),
+  flag(
     '--trusted-peer|-t [trusted-peer]',
     'Public key of a trusted peer (allowed to set announce: true). Can be more than 1.'
   ).multiple(),
@@ -96,6 +100,7 @@ const cmd = command(
     const logStreams = flags.logStreams
 
     const storage = flags.storage || 'blind-peer'
+    const activeCorestore = flags.activeCorestore || false
     const port = flags.port ? parseInt(flags.port) : null
     const bootstrap = flags.bootstrap
       ? [{ host: '127.0.0.1', port: parseInt(flags.bootstrap, 10) }]
@@ -120,6 +125,7 @@ const cmd = command(
 
     const blindPeer = new BlindPeer(storage, {
       bootstrap,
+      activeCorestore,
       trustedPubKeys,
       maxBytes,
       port,
@@ -286,6 +292,7 @@ const cmd = command(
     }
 
     await blindPeer.ready() // needed to be able to access the swarm object
+    logger.info(`Corestore is in ${blindPeer.store.active ? 'active' : 'passive'} mode`)
     blindPeer.swarm.on('ban', (peerInfo, err) => {
       logger.warn(`Banned peer: ${b4a.toString(peerInfo.publicKey, 'hex')}.\n${err.stack}`)
     })
