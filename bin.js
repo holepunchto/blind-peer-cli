@@ -27,7 +27,8 @@ const healthcheckCommand = command(
   async function ({ flags }) {
     const filename = flags.healthFile
     if (typeof filename !== 'string' || filename.length === 0) {
-      throw new Error('--health-file is required')
+      console.error('--health-file is required')
+      process.exit(1)
     }
 
     if (await health.checkHealthCheckFile(filename)) {

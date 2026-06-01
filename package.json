@@ -68,6 +68,10 @@
       "bare": "bare-fs",
       "default": "fs"
     },
+    "fs/promises": {
+      "bare": "bare-fs/promises",
+      "default": "fs/promises"
+    },
     "child_process": {
       "bare": "bare-subprocess",
       "default": "child_process"
