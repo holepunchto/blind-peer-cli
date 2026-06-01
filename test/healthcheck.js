@@ -14,17 +14,11 @@ test('healthcheck passes for fresh ready state', async (t) => {
   t.alike(JSON.parse(result.stdout), { ok: true })
 })
 
-test('healthcheck fails when file is not ready', async (t) => {
-  const filename = path.join(await t.tmp(), 'health.json')
-  await fs.writeFile(
-    filename,
-    JSON.stringify({ ready: false, timestamp: Date.now(), pid: process.pid })
-  )
-
-  const result = await runBlindPeerBin(t, 'healthcheck', '--health-file', filename)
+test('healthcheck requires health-file path', async (t) => {
+  const result = await runBlindPeerBin(t, 'healthcheck')
 
   t.is(result.exitCode, 1)
-  t.ok(result.stderr.includes('blind-peer is not ready'))
+  t.ok(result.stderr.includes('--health-file is required'))
 })
 
 test('healthcheck fails for stale state', async (t) => {

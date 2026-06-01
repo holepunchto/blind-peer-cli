@@ -19,14 +19,16 @@ const SERVICE_NAME = 'blind-peer'
 const DEFAULT_STORAGE_LIMIT_MB = 100_000
 const DEFAULT_TOP_K_PEER_THRESHOLD = 100
 const DEFAULT_TOP_K_REFERRER_THRESHOLD = 100
-const DEFAULT_HEALTH_FILE = '/tmp/blind-peer-health.json'
 const DEFAULT_HEARTBEAT_INTERVAL = 5000
 
 const healthcheckCommand = command(
   'healthcheck',
-  flag('--health-file [path]', `Health file path (default ${DEFAULT_HEALTH_FILE})`),
+  flag('--health-file [path]', 'Healthcheck file path'),
   async function ({ flags }) {
-    const filename = flags.healthFile || DEFAULT_HEALTH_FILE
+    const filename = flags.healthFile
+    if (typeof filename !== 'string' || filename.length === 0) {
+      throw new Error('--health-file is required')
+    }
 
     if (await health.checkHealthCheckFile(filename)) {
       console.log(JSON.stringify({ ok: true }))
@@ -107,10 +109,7 @@ const cmd = command(
     '--top-k-referrer-threshold [int]',
     `(Advanced) Spike threshold for top-k tracking by referrer (defaults to ${DEFAULT_TOP_K_REFERRER_THRESHOLD})`
   ),
-  flag(
-    '--health-file [path]',
-    `Write Kubernetes exec-probe health state to this path (default ${DEFAULT_HEALTH_FILE})`
-  ),
+  flag('--health-file [path]', 'Write Kubernetes exec-probe health state to this path'),
   healthcheckCommand,
   async function ({ flags }) {
     const debug = flags.debug
@@ -121,7 +120,6 @@ const cmd = command(
     logger.info('Starting blind peer')
 
     const logStreams = flags.logStreams
-    const healthFile = flags.healthFile || DEFAULT_HEALTH_FILE
 
     const storage = flags.storage || 'blind-peer'
     const activeCorestore = flags.activeCorestore || false
@@ -299,8 +297,6 @@ const cmd = command(
 
     let instrumentation = null
     goodbye(async () => {
-      if (healthInterval) clearInterval(healthInterval)
-      await health.deleteHealthCheckFile(healthFile)
       if (instrumentation) {
         logger.info('Closing instrumentation')
         await instrumentation.close()
@@ -424,14 +420,18 @@ const cmd = command(
       await instrumentation.ready()
     }
 
-    await health.writeHealthCheckFile(healthFile)
-    const healthInterval = setInterval(
-      () => health.writeHealthCheckFile(healthFile),
-      DEFAULT_HEARTBEAT_INTERVAL
-    )
-    goodbye(() => {
-      clearInterval(healthInterval)
-    })
+    if (flags.healthFile) {
+      await health.writeHealthCheckFile(flags.healthFile)
+      const healthInterval = setInterval(
+        () => health.writeHealthCheckFile(flags.healthFile),
+        DEFAULT_HEARTBEAT_INTERVAL
+      )
+
+      goodbye(async () => {
+        clearInterval(healthInterval)
+        await health.deleteHealthCheckFile(flags.healthFile)
+      })
+    }
 
     logger.info(`Listening at ${idEnc.normalize(blindPeer.publicKey)}`)
     logger.info(`Encryption public key is ${idEnc.normalize(blindPeer.encryptionPublicKey)}`)
