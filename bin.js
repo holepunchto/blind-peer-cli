@@ -49,6 +49,10 @@ const cmd = command(
     'Public key of an IP ban list to subscribe to. Can be hex or z32. Can be more than 1.'
   ).multiple(),
   flag(
+    '--push-gateway-key [push-gateway-key]',
+    'Public key of a push gateway to forward notifications to. Can be hex or z32. Can be more than 1.'
+  ).multiple(),
+  flag(
     '--autodiscovery-rpc-key [autodiscovery-rpc-key]',
     'Public key where the autodiscovery service is listening. When set, the autodiscovery-seed must also be set. Can be hex or z32.'
   ),
@@ -110,6 +114,7 @@ const cmd = command(
     const trustedPubKeys = (flags.trustedPeer || []).map((k) => idEnc.decode(k))
     const routerKey = flags.routerKey ? idEnc.decode(flags.routerKey) : null
     const ipBanListKeys = (flags.ipBanListKey || []).map((k) => idEnc.decode(k))
+    const pushGatewayKeys = (flags.pushGatewayKey || []).map((k) => idEnc.decode(k))
 
     const peerThreshold = flags.topKPeerThreshold || DEFAULT_TOP_K_PEER_THRESHOLD
     const referrerThreshold = flags.topKReferrerThreshold || DEFAULT_TOP_K_REFERRER_THRESHOLD
@@ -132,6 +137,7 @@ const cmd = command(
       routerKey,
       adminRouter: adminRpcRouter,
       ipBanListKeys,
+      pushGatewayKeys,
       topK: {
         bucketCount: 6,
         bucketTime: 10_000,
@@ -270,6 +276,11 @@ const cmd = command(
     if (ipBanListKeys.length > 0) {
       logger.info(
         `IP ban list public keys:\n  -${blindPeer.ipBanLists.map((list) => idEnc.normalize(list.key)).join('\n  -')}`
+      )
+    }
+    if (pushGatewayKeys.length > 0) {
+      logger.info(
+        `Push gateway public keys:\n  -${blindPeer.pushGatewayKeys.map(idEnc.normalize).join('\n  -')}`
       )
     }
 
