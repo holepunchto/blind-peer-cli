@@ -14,9 +14,9 @@ exports.spawnBlindPeerBin = (t, ...args) => {
 
   t.teardown(async () => {
     if (proc.exitCode === null) {
-      // const killedP = once(proc, 'exit')
+      const killedP = once(proc, 'exit')
       proc.kill('SIGKILL')
-      // await killedP
+      await killedP
     }
   }, 10)
 
