@@ -9,15 +9,38 @@ const byteSize = require('tiny-byte-size')
 const pino = require('pino')
 const ProtomuxRPCRouter = require('protomux-rpc-router')
 const defaultMiddleware = require('protomux-rpc-middleware')
+const process = require('process')
 const b4a = require('b4a')
 const hypCrypto = require('hypercore-crypto')
 const BlindPeer = require('blind-peer')
 const { version: ownVersion } = require('./package.json')
+const HealthProbe = require('./lib/health-probe')
 
 const SERVICE_NAME = 'blind-peer'
 const DEFAULT_STORAGE_LIMIT_MB = 100_000
 const DEFAULT_TOP_K_PEER_THRESHOLD = 100
 const DEFAULT_TOP_K_REFERRER_THRESHOLD = 100
+
+const readinessProbeCommand = command(
+  'readiness-probe',
+  flag('--control-socket [path]', 'Control Unix domain socket path'),
+  async function ({ flags }) {
+    const controlSocket = flags.controlSocket
+    if (!controlSocket) {
+      console.error('--control-socket is required')
+      process.exit(1)
+      return
+    }
+
+    try {
+      await HealthProbe.readinessProbe(controlSocket)
+      console.log(JSON.stringify({ ok: true }))
+    } catch (e) {
+      console.error(`blind-peer is not ready: ${e.message ?? 'readiness-probe failed'}`)
+      process.exit(1)
+    }
+  }
+)
 
 const cmd = command(
   'blind-peer',
@@ -93,6 +116,8 @@ const cmd = command(
     '--top-k-referrer-threshold [int]',
     `(Advanced) Spike threshold for top-k tracking by referrer (defaults to ${DEFAULT_TOP_K_REFERRER_THRESHOLD})`
   ),
+  flag('--control-socket [path]', 'Listen for Kubernetes exec-probe control RPCs on this socket'),
+  readinessProbeCommand,
   async function ({ flags }) {
     const debug = flags.debug
     const logger = pino({
@@ -354,6 +379,18 @@ const cmd = command(
     logger.info(
       `Bytes allocated: ${byteSize(blindPeer.digest.bytesAllocated)} of ${byteSize(blindPeer.maxBytes)}`
     )
+
+    if (flags.controlSocket) {
+      const healthProbe = new HealthProbe(flags.controlSocket)
+      await healthProbe.ready()
+
+      goodbye(async () => {
+        logger.info('Closing health probe')
+        await healthProbe.close()
+      })
+
+      logger.info(`Health probe listening at ${flags.controlSocket}`)
+    }
 
     if (flags.autodiscoveryRpcKey) {
       throw new Error('autobase discovery temp not supported')
