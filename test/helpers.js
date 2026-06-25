@@ -13,7 +13,7 @@ exports.spawnBlindPeerBin = (t, ...args) => {
   const proc = spawn(process.execPath, [EXECUTABLE, ...args])
 
   t.teardown(async () => {
-    if (proc.exitCode === null) {
+    if (proc.exitCode === null && proc.signalCode === null) {
       const killedP = once(proc, 'exit')
       proc.kill('SIGKILL')
       await killedP
