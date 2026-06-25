@@ -33,6 +33,4 @@ test('logs multiple IP ban list public keys through the CLI', async (t) => {
     `IP ban list public keys:\n  -${firstKey}\n  -${secondKey}`,
     'logs all submitted IP ban list public keys'
   )
-
-  proc.kill()
 })
