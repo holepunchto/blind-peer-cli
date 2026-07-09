@@ -175,6 +175,9 @@ const cmd = command(
     blindPeer.on('flush-error', (e) => {
       logger.warn(`Error while flushing the db: ${e.stack}`)
     })
+    blindPeer.on('notification-error', (e) => {
+      logger.warn(`Notification error: ${e.stack}`)
+    })
 
     blindPeer.on('muxer-paired', (stream) => {
       logger.debug(`Paired muxer with peer ${streamToStr(stream)}`)
