@@ -179,7 +179,11 @@ const cmd = command(
       logger.warn(`Notification error: ${e.stack}`)
       if (flags.debug) {
         try {
-          logger.debug('Notification error: ip %s', connection.rawStream.remoteHost)
+          logger.debug(
+            'Notification error: ip %s publicKey %s',
+            connection.rawStream.remoteHost,
+            idEnc.encode(connection.remotePublicKey)
+          )
 
           const requestJson = {
             block: {
@@ -237,8 +241,13 @@ const cmd = command(
     blindPeer.on('muxer-error', (e, stream) => {
       logger.info(`Error while running the muxer protocol: ${e.stack} ${streamToStr(stream)}`)
     })
-    blindPeer.on('add-cores-received', (stream) => {
-      logger.debug(`add-cores request received from peer ${streamToStr(stream)}`)
+    blindPeer.on('add-cores-received', (stream, request) => {
+      logger.debug(
+        `add-cores request received from peer %s with referrer %s and cores (%s)`,
+        streamToStr(stream),
+        request.referrer ? idEnc.encode(request.referrer) : 'null',
+        request.cores.map((core) => idEnc.encode(hypCrypto.discoveryKey(core.key))).join(', ')
+      )
     })
     blindPeer.on('add-cores-done', (stream) => {
       logger.debug(`add-cores request handled from peer ${streamToStr(stream)}`)
