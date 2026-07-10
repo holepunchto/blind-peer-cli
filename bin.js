@@ -179,7 +179,11 @@ const cmd = command(
       logger.warn(`Notification error: ${e.stack}`)
       if (flags.debug) {
         try {
-          logger.debug('Notification error: ip %s', connection.rawStream.remoteHost)
+          logger.debug(
+            'Notification error: ip %s publicKey %s',
+            connection.rawStream.remoteHost,
+            idEnc.encode(connection.remotePublicKey)
+          )
 
           const requestJson = {
             block: {
