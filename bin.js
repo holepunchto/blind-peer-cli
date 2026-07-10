@@ -175,8 +175,60 @@ const cmd = command(
     blindPeer.on('flush-error', (e) => {
       logger.warn(`Error while flushing the db: ${e.stack}`)
     })
-    blindPeer.on('notification-error', (e) => {
+    blindPeer.on('notification-error', async (e, connection, request) => {
       logger.warn(`Notification error: ${e.stack}`)
+      if (flags.debug) {
+        try {
+          logger.debug('Notification error: ip %s', connection.rawStream.remoteHost)
+
+          const requestJson = {
+            block: {
+              ...request.block,
+              key: idEnc.encode(request.block.key)
+            },
+            destination: {
+              ...request.destination,
+              key: idEnc.encode(request.destination.key),
+              discoveryKey: b4a.toString(request.destination.discoveryKey, 'hex')
+            }
+          }
+          logger.debug(`Notification error: request %o`, requestJson)
+
+          const core = await blindPeer.store.get(request.block.key)
+          await core.ready()
+
+          try {
+            const coreInfo = await core.info()
+            const coreInfoJson = {
+              ...coreInfo,
+              key: idEnc.encode(coreInfo.key),
+              discoveryKey: idEnc.encode(coreInfo.discoveryKey)
+            }
+            logger.debug(`Notification error: core.info %o`, coreInfoJson)
+            const corePeersJson = core.peers.slice(0, 10).map((peer) => ({
+              remotePublicKey: idEnc.encode(peer.remotePublicKey),
+              remoteLength: peer.remoteLength,
+              remoteFork: peer.remoteFork,
+              remoteCanUpgrade: peer.remoteCanUpgrade
+            }))
+            logger.debug(`Notification error: core.peers.length ${core.peers.length}`)
+            logger.debug(`Notification error: core.peers %o`, corePeersJson)
+          } finally {
+            await core.close()
+          }
+          const record = await blindPeer.db.getCoreRecord(request.block.key)
+          if (record) {
+            const recordJson = {
+              ...record,
+              key: idEnc.encode(record.key),
+              referrer: record.referrer ? idEnc.encode(record.referrer) : null
+            }
+            logger.debug(`Notification error:: core record %o`, recordJson)
+          }
+        } catch (e) {
+          logger.warn(e.stack)
+        }
+      }
     })
 
     blindPeer.on('muxer-paired', (stream) => {
@@ -196,6 +248,9 @@ const cmd = command(
     })
     blindPeer.topKByReferrer.on('spike', (key, count) => {
       logger.info(`top-k by referrrer spiked: key=${key} count=${count}`)
+    })
+    blindPeer.topKByIp.on('spike', (key, count) => {
+      logger.debug(`top-k by ip spiked: key=${key} count=${count}`)
     })
 
     blindPeer.on('add-new-core', (record, _, stream) => {
