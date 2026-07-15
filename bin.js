@@ -20,6 +20,7 @@ const SERVICE_NAME = 'blind-peer'
 const DEFAULT_STORAGE_LIMIT_MB = 100_000
 const DEFAULT_TOP_K_PEER_THRESHOLD = 100
 const DEFAULT_TOP_K_REFERRER_THRESHOLD = 100
+const DEFAULT_TREE_CACHE_SIZE = 100_000
 
 const readinessProbeCommand = command(
   'readiness-probe',
@@ -97,6 +98,10 @@ const cmd = command(
   ),
   flag('--scraper-alias [scraper-alias]', '(optional) Alias with which to register to the scraper'),
   flag(
+    '--tree-cache-size [tree-cache-size]',
+    `(Advanced) tree cache size in hypercore storage. Defaults to ${DEFAULT_TREE_CACHE_SIZE}`
+  ),
+  flag(
     '--log-streams',
     '(Temporary, Advanced): enable debug logs on the UDX streams managed by the dht'
   ),
@@ -141,6 +146,9 @@ const cmd = command(
     const ipBanListKeys = (flags.ipBanListKey || []).map((k) => idEnc.decode(k))
     const pushGatewayKeys = (flags.pushGatewayKey || []).map((k) => idEnc.decode(k))
 
+    const treeCacheSize = parseInt(flags.treeCacheSize || DEFAULT_TREE_CACHE_SIZE)
+    const treeCache = { maxSize: treeCacheSize }
+
     const peerThreshold = flags.topKPeerThreshold || DEFAULT_TOP_K_PEER_THRESHOLD
     const referrerThreshold = flags.topKReferrerThreshold || DEFAULT_TOP_K_REFERRER_THRESHOLD
 
@@ -159,6 +167,7 @@ const cmd = command(
       trustedPubKeys,
       maxBytes,
       port,
+      treeCache,
       routerKey,
       adminRouter: adminRpcRouter,
       ipBanListKeys,
