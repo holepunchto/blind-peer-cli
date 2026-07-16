@@ -221,6 +221,7 @@ const cmd = command(
             const corePeersJson = core.peers.slice(0, 10).map((peer) => ({
               remotePublicKey: idEnc.encode(peer.remotePublicKey),
               remoteLength: peer.remoteLength,
+              remoteContiguousLength: peer.remoteContiguousLength,
               remoteFork: peer.remoteFork,
               remoteCanUpgrade: peer.remoteCanUpgrade
             }))
