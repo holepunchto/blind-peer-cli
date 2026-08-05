@@ -185,7 +185,9 @@ const cmd = command(
       logger.warn(`Error while flushing the db: ${e.stack}`)
     })
     blindPeer.on('notification-error', async (e, connection, request) => {
-      logger.warn(`Notification error: ${e.stack}`)
+      logger.warn(
+        `Notification error: discoveryKey=${b4a.toString(request.destination.discoveryKey, 'hex')} ${e.stack}`
+      )
       if (flags.debug) {
         try {
           logger.debug(
