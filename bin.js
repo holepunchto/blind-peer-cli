@@ -186,7 +186,10 @@ const cmd = command(
     })
     blindPeer.on('notification-error', async (e, connection, request) => {
       logger.warn(
-        `Notification error: discoveryKey=${b4a.toString(request.destination.discoveryKey, 'hex')} ${e.stack}`
+        `Notification error: discoveryKey=%s publicKey=%s %s`,
+        b4a.toString(request.destination.discoveryKey, 'hex'),
+        idEnc.encode(connection.remotePublicKey),
+        e.stack
       )
       if (flags.debug) {
         try {
