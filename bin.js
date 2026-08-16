@@ -250,6 +250,26 @@ const cmd = command(
       }
     })
 
+    blindPeer.on('notification-rx', (request, stream) => {
+      try {
+        logger.debug(
+          `Notification request received from ${streamToStr(stream)} for index: ${request.block.index} of core: ${idEnc.normalize(request.block.key)} (discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))}) in room key: ${idEnc.normalize(request.destination.key)} (room discovery key: ${idEnc.normalize(request.destination.discoveryKey)})`
+        )
+      } catch (e) {
+        logger.warn(e.stack)
+      }
+    })
+
+    blindPeer.on('notification-sent', (request, payload, stream, runtime) => {
+      try {
+        logger.info(
+          `Notification sent from ${streamToStr(stream)} for index: ${request.block.index} of core discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))} in room discovery key: ${idEnc.normalize(request.destination.discoveryKey)} (runtime: ${runtime}ms)`
+        )
+      } catch (e) {
+        logger.warn(e.stack)
+      }
+    })
+
     blindPeer.on('muxer-paired', (stream) => {
       logger.debug(`Paired muxer with peer ${streamToStr(stream)}`)
     })
