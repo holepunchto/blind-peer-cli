@@ -131,6 +131,13 @@ const cmd = command(
     })
     logger.info('Starting blind peer')
 
+    const handleFatalError = (err, errType) => {
+      logger.fatal(`${errType}: ${err?.stack}`)
+      process.exit(1)
+    }
+    process.on('uncaughtException', (err) => handleFatalError(err, 'uncaughtException'))
+    process.on('unhandledRejection', (err) => handleFatalError(err, 'unhandledRejection'))
+
     const logStreams = flags.logStreams
 
     const storage = flags.storage || 'blind-peer'
