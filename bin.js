@@ -256,6 +256,12 @@ const cmd = command(
         }
       }
     })
+    blindPeer.on('notification-error-snapshot', (snapshot) => {
+      logger.warn('Notification error: core snapshot %o', snapshot)
+    })
+    blindPeer.on('warn', (e) => {
+      logger.warn('warn: %s', e.stack)
+    })
 
     blindPeer.on('notification-rx', (request, stream) => {
       try {
