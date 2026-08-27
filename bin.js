@@ -132,7 +132,7 @@ const cmd = command(
     logger.info('Starting blind peer')
 
     const handleFatalError = (err, errType) => {
-      logger.fatal(`${errType}: ${err.stack}`)
+      logger.fatal(`${errType}: ${err?.stack}`)
       process.exit(1)
     }
     process.on('uncaughtException', (err) => handleFatalError(err, 'uncaughtException'))
