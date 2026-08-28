@@ -279,46 +279,22 @@ const cmd = command(
     blindPeer.on('notification-rx', (request, stream) => {
       try {
         logger.debug(
+          getHandshake(stream),
           `Notification request received from ${streamToStr(stream)} for index: ${request.block.index} of core: ${idEnc.normalize(request.block.key)} (discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))}) in room key: ${idEnc.normalize(request.destination.key)} (room discovery key: ${idEnc.normalize(request.destination.discoveryKey)})`
         )
       } catch (e) {
-        logger.warn(e.stack)
+        logger.warn(getHandshake(stream), e.stack)
       }
     })
 
     blindPeer.on('notification-sent', (request, payload, stream, runtime) => {
       try {
         logger.info(
+          getHandshake(stream),
           `Notification sent from ${streamToStr(stream)} for index: ${request.block.index} of core discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))} in room discovery key: ${idEnc.normalize(request.destination.discoveryKey)} (runtime: ${runtime}ms)`
         )
       } catch (e) {
-        logger.warn(e.stack)
-      }
-    })
-    blindPeer.on('notification-error-snapshot', (snapshot) => {
-      logger.warn('Notification error: core snapshot %o', snapshot)
-    })
-    blindPeer.on('warn', (e) => {
-      logger.warn('warn: %s', e.stack)
-    })
-
-    blindPeer.on('notification-rx', (request, stream) => {
-      try {
-        logger.debug(
-          `Notification request received from ${streamToStr(stream)} for index: ${request.block.index} of core: ${idEnc.normalize(request.block.key)} (discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))}) in room key: ${idEnc.normalize(request.destination.key)} (room discovery key: ${idEnc.normalize(request.destination.discoveryKey)})`
-        )
-      } catch (e) {
-        logger.warn(e.stack)
-      }
-    })
-
-    blindPeer.on('notification-sent', (request, payload, stream, runtime) => {
-      try {
-        logger.info(
-          `Notification sent from ${streamToStr(stream)} for index: ${request.block.index} of core discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))} in room discovery key: ${idEnc.normalize(request.destination.discoveryKey)} (runtime: ${runtime}ms)`
-        )
-      } catch (e) {
-        logger.warn(e.stack)
+        logger.warn(getHandshake(stream), e.stack)
       }
     })
 
@@ -502,8 +478,8 @@ const cmd = command(
     if (debug) {
       blindPeer.swarm.on('connection', (conn, peerInfo) => {
         const key = idEnc.normalize(peerInfo.publicKey)
-        logger.debug(getHandshake(conn), `Opened connection to ${key}`)
-        conn.on('close', () => logger.debug(getHandshake(conn), `Closed connection to ${key}`))
+        logger.debug(`Opened connection to ${key}`)
+        conn.on('close', () => logger.debug(`Closed connection to ${key}`))
         conn.on('error', (err) => {
           if (err.code === 'ECONNRESET') {
             logger.debug(getHandshake(conn), `Connection error with ${key}: ${err.stack}`)
