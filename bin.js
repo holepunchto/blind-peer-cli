@@ -185,10 +185,11 @@ const cmd = command(
       logger.warn(`Error while flushing the db: ${e.stack}`)
     })
     blindPeer.on('notification-error', async (e, connection, request) => {
-      logger.warn(`Notification error: ${e.stack}`)
+      logger.warn(getHandshake(connection), `Notification error: ${e.stack}`)
       if (flags.debug) {
         try {
           logger.debug(
+            getHandshake(connection),
             'Notification error: ip %s publicKey %s',
             connection.rawStream.remoteHost,
             idEnc.encode(connection.remotePublicKey)
@@ -205,7 +206,7 @@ const cmd = command(
               discoveryKey: b4a.toString(request.destination.discoveryKey, 'hex')
             }
           }
-          logger.debug(`Notification error: request %o`, requestJson)
+          logger.debug(getHandshake(connection), `Notification error: request %o`, requestJson)
 
           const core = await blindPeer.store.get(request.block.key)
           await core.ready()
@@ -217,7 +218,7 @@ const cmd = command(
               key: idEnc.encode(coreInfo.key),
               discoveryKey: idEnc.encode(coreInfo.discoveryKey)
             }
-            logger.debug(`Notification error: core.info %o`, coreInfoJson)
+            logger.debug(getHandshake(connection), `Notification error: core.info %o`, coreInfoJson)
             const corePeersJson = core.peers.slice(0, 10).map((peer) => ({
               remotePublicKey: idEnc.encode(peer.remotePublicKey),
               remoteLength: peer.remoteLength,
@@ -225,8 +226,15 @@ const cmd = command(
               remoteFork: peer.remoteFork,
               remoteCanUpgrade: peer.remoteCanUpgrade
             }))
-            logger.debug(`Notification error: core.peers.length ${core.peers.length}`)
-            logger.debug(`Notification error: core.peers %o`, corePeersJson)
+            logger.debug(
+              getHandshake(connection),
+              `Notification error: core.peers.length ${core.peers.length}`
+            )
+            logger.debug(
+              getHandshake(connection),
+              `Notification error: core.peers %o`,
+              corePeersJson
+            )
           } finally {
             await core.close()
           }
@@ -237,22 +245,30 @@ const cmd = command(
               key: idEnc.encode(record.key),
               referrer: record.referrer ? idEnc.encode(record.referrer) : null
             }
-            logger.debug(`Notification error:: core record %o`, recordJson)
+            logger.debug(
+              getHandshake(connection),
+              `Notification error:: core record %o`,
+              recordJson
+            )
           }
         } catch (e) {
-          logger.warn(e.stack)
+          logger.warn(getHandshake(connection), e.stack)
         }
       }
     })
 
     blindPeer.on('muxer-paired', (stream) => {
-      logger.debug(`Paired muxer with peer ${streamToStr(stream)}`)
+      logger.debug(getHandshake(stream), `Paired muxer with peer ${streamToStr(stream)}`)
     })
     blindPeer.on('muxer-error', (e, stream) => {
-      logger.info(`Error while running the muxer protocol: ${e.stack} ${streamToStr(stream)}`)
+      logger.info(
+        getHandshake(stream),
+        `Error while running the muxer protocol: ${e.stack} ${streamToStr(stream)}`
+      )
     })
     blindPeer.on('add-cores-received', (stream, request) => {
       logger.debug(
+        getHandshake(stream),
         `add-cores request received from peer %s with referrer %s and cores (%s)`,
         streamToStr(stream),
         request.referrer ? idEnc.encode(request.referrer) : 'null',
@@ -260,7 +276,10 @@ const cmd = command(
       )
     })
     blindPeer.on('add-cores-done', (stream) => {
-      logger.debug(`add-cores request handled from peer ${streamToStr(stream)}`)
+      logger.debug(
+        getHandshake(stream),
+        `add-cores request handled from peer ${streamToStr(stream)}`
+      )
     })
     blindPeer.topKByPeer.on('spike', (key, count) => {
       logger.info(`top-k by peer spiked: key=${key} count=${count}`)
@@ -276,30 +295,35 @@ const cmd = command(
       try {
         if (record.announce) {
           logger.info(
+            getHandshake(stream),
             `add-core request received from peer ${streamToStr(stream)} for record ${recordToStr(record)}`
           )
         } else {
           logger.debug(
+            getHandshake(stream),
             `add-core request received from peer ${streamToStr(stream)} for record ${recordToStr(record)}`
           )
         }
       } catch (e) {
-        logger.info(`Invalid add-core request received: ${e.stack}`)
+        logger.info(getHandshake(stream), `Invalid add-core request received: ${e.stack}`)
         logger.info(record)
       }
     })
     blindPeer.on('delete-blocked', (stream, { key }) => {
       logger.info(
+        getHandshake(stream),
         `Blocked delete-core request from untrusted peer ${streamToStr(stream)} for core ${idEnc.normalize(key)}`
       )
     })
     blindPeer.on('delete-core', (stream, { key, existing }) => {
       logger.info(
+        getHandshake(stream),
         `Received delete-core request from trusted peer ${streamToStr(stream)} for core ${idEnc.normalize(key)}. Existing: ${existing}`
       )
     })
     blindPeer.on('delete-core-end', (stream, { key, announced }) => {
       logger.info(
+        getHandshake(stream),
         `Completed delete-core request from trusted peer ${streamToStr(stream)} for core ${idEnc.normalize(key)}. Was announced: ${announced}`
       )
     })
@@ -364,6 +388,7 @@ const cmd = command(
       const remotePubKey = idEnc.normalize(from.stream.remotePublicKey)
       const key = idEnc.normalize(core.key)
       logger.warn(
+        getHandshake(from.stream),
         `Received invalid request for core ${key} from peer ${remotePubKey} at ${address} (${err.stack})`
       )
     })
@@ -412,14 +437,14 @@ const cmd = command(
     if (debug) {
       blindPeer.swarm.on('connection', (conn, peerInfo) => {
         const key = idEnc.normalize(peerInfo.publicKey)
-        logger.debug(`Opened connection to ${key}`)
-        conn.on('close', () => logger.debug(`Closed connection to ${key}`))
+        logger.debug(getHandshake(conn), `Opened connection to ${key}`)
+        conn.on('close', () => logger.debug(getHandshake(conn), `Closed connection to ${key}`))
         conn.on('error', (err) => {
           if (err.code === 'ECONNRESET') {
-            logger.debug(`Connection error with ${key}: ${err.stack}`)
+            logger.debug(getHandshake(conn), `Connection error with ${key}: ${err.stack}`)
             return
           }
-          logger.info(`Connection error with ${key}: ${err.stack}`)
+          logger.info(getHandshake(conn), `Connection error with ${key}: ${err.stack}`)
         })
       })
     }
@@ -556,6 +581,10 @@ function coreToInfo(core, includePublicKey = false) {
   let res = `Discovery key ${idEnc.normalize(discKey)} (${core.contiguousLength} / ${core.length}, ${core.peers.length} peers)`
   if (includePublicKey) res += `. Public key: ${idEnc.normalize(core.key)}`
   return res
+}
+
+function getHandshake(stream) {
+  return stream?.userData?.getLastChannel({ protocol: 'blind-peer' })?.handshake
 }
 
 cmd.parse()
