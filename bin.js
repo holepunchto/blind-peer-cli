@@ -131,6 +131,13 @@ const cmd = command(
     })
     logger.info('Starting blind peer')
 
+    const handleFatalError = (err, errType) => {
+      logger.fatal(`${errType}: ${err?.stack}`)
+      process.exit(1)
+    }
+    process.on('uncaughtException', (err) => handleFatalError(err, 'uncaughtException'))
+    process.on('unhandledRejection', (err) => handleFatalError(err, 'unhandledRejection'))
+
     const logStreams = flags.logStreams
 
     const storage = flags.storage || 'blind-peer'
@@ -185,7 +192,13 @@ const cmd = command(
       logger.warn(`Error while flushing the db: ${e.stack}`)
     })
     blindPeer.on('notification-error', async (e, connection, request) => {
-      logger.warn(getHandshake(connection), `Notification error: ${e.stack}`)
+      logger.warn(
+        getHandshake(connection),
+        `Notification error: discoveryKey=%s publicKey=%s %s`,
+        b4a.toString(request.destination.discoveryKey, 'hex'),
+        idEnc.encode(connection.remotePublicKey),
+        e.stack
+      )
       if (flags.debug) {
         try {
           logger.debug(
@@ -254,6 +267,58 @@ const cmd = command(
         } catch (e) {
           logger.warn(getHandshake(connection), e.stack)
         }
+      }
+    })
+    blindPeer.on('notification-error-snapshot', (snapshot) => {
+      logger.warn('Notification error: core snapshot %o', snapshot)
+    })
+    blindPeer.on('warn', (e) => {
+      logger.warn('warn: %s', e.stack)
+    })
+
+    blindPeer.on('notification-rx', (request, stream) => {
+      try {
+        logger.debug(
+          `Notification request received from ${streamToStr(stream)} for index: ${request.block.index} of core: ${idEnc.normalize(request.block.key)} (discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))}) in room key: ${idEnc.normalize(request.destination.key)} (room discovery key: ${idEnc.normalize(request.destination.discoveryKey)})`
+        )
+      } catch (e) {
+        logger.warn(e.stack)
+      }
+    })
+
+    blindPeer.on('notification-sent', (request, payload, stream, runtime) => {
+      try {
+        logger.info(
+          `Notification sent from ${streamToStr(stream)} for index: ${request.block.index} of core discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))} in room discovery key: ${idEnc.normalize(request.destination.discoveryKey)} (runtime: ${runtime}ms)`
+        )
+      } catch (e) {
+        logger.warn(e.stack)
+      }
+    })
+    blindPeer.on('notification-error-snapshot', (snapshot) => {
+      logger.warn('Notification error: core snapshot %o', snapshot)
+    })
+    blindPeer.on('warn', (e) => {
+      logger.warn('warn: %s', e.stack)
+    })
+
+    blindPeer.on('notification-rx', (request, stream) => {
+      try {
+        logger.debug(
+          `Notification request received from ${streamToStr(stream)} for index: ${request.block.index} of core: ${idEnc.normalize(request.block.key)} (discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))}) in room key: ${idEnc.normalize(request.destination.key)} (room discovery key: ${idEnc.normalize(request.destination.discoveryKey)})`
+        )
+      } catch (e) {
+        logger.warn(e.stack)
+      }
+    })
+
+    blindPeer.on('notification-sent', (request, payload, stream, runtime) => {
+      try {
+        logger.info(
+          `Notification sent from ${streamToStr(stream)} for index: ${request.block.index} of core discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))} in room discovery key: ${idEnc.normalize(request.destination.discoveryKey)} (runtime: ${runtime}ms)`
+        )
+      } catch (e) {
+        logger.warn(e.stack)
       }
     })
 
