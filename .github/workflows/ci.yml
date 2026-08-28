@@ -21,6 +21,6 @@ jobs:
     steps:
       - uses: holepunchto/actions/bare-base@v1
         with:
-          allow-git: root
+          allow-git: all
       - run: npm test
       - run: npm run test:bare
