@@ -265,7 +265,7 @@ const cmd = command(
             )
           }
         } catch (e) {
-          logger.warn(getHandshake(connection), e.stack)
+          logger.warn(e.stack)
         }
       }
     })
@@ -283,7 +283,7 @@ const cmd = command(
           `Notification request received from ${streamToStr(stream)} for index: ${request.block.index} of core: ${idEnc.normalize(request.block.key)} (discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))}) in room key: ${idEnc.normalize(request.destination.key)} (room discovery key: ${idEnc.normalize(request.destination.discoveryKey)})`
         )
       } catch (e) {
-        logger.warn(getHandshake(stream), e.stack)
+        logger.warn(e.stack)
       }
     })
 
@@ -294,7 +294,7 @@ const cmd = command(
           `Notification sent from ${streamToStr(stream)} for index: ${request.block.index} of core discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))} in room discovery key: ${idEnc.normalize(request.destination.discoveryKey)} (runtime: ${runtime}ms)`
         )
       } catch (e) {
-        logger.warn(getHandshake(stream), e.stack)
+        logger.warn(e.stack)
       }
     })
 
@@ -346,7 +346,7 @@ const cmd = command(
           )
         }
       } catch (e) {
-        logger.info(getHandshake(stream), `Invalid add-core request received: ${e.stack}`)
+        logger.info(`Invalid add-core request received: ${e.stack}`)
         logger.info(record)
       }
     })
