@@ -55,6 +55,7 @@
     "bare-process": "^4.4.1",
     "bare-subprocess": "^6.0.0",
     "blind-peer-encodings": "^3.3.0",
+    "blind-peering": "^2.7.0",
     "brittle": "^3.19.1",
     "hyperdht": "^6.31.0",
     "lunte": "^1.8.0",
