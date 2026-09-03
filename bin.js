@@ -21,6 +21,8 @@ const DEFAULT_STORAGE_LIMIT_MB = 100_000
 const DEFAULT_TOP_K_PEER_THRESHOLD = 100
 const DEFAULT_TOP_K_REFERRER_THRESHOLD = 100
 const DEFAULT_TREE_CACHE_SIZE = 100_000
+const DEFAULT_PUSH_NOTIF_RATE_LIMIT_INTERVAL = 10
+const DEFAULT_PUSH_NOTIF_RATE_LIMIT_CAPACITY = 50
 
 const readinessProbeCommand = command(
   'readiness-probe',
@@ -121,6 +123,15 @@ const cmd = command(
     '--top-k-referrer-threshold [int]',
     `(Advanced) Spike threshold for top-k tracking by referrer (defaults to ${DEFAULT_TOP_K_REFERRER_THRESHOLD})`
   ),
+  flag(
+    '--push-notifications-rate-limit-capacity [int]',
+    `(Advanced) capacity for the push notifications rate limit (defaults to ${DEFAULT_PUSH_NOTIF_RATE_LIMIT_CAPACITY})`
+  ),
+  flag(
+    '--push-notifications-rate-limit-interval [int]',
+    `(Advanced) interval in ms for the push notifications rate limit (defaults to ${DEFAULT_PUSH_NOTIF_RATE_LIMIT_INTERVAL})`
+  ),
+
   flag('--control-socket [path]', 'Listen for Kubernetes exec-probe control RPCs on this socket'),
   readinessProbeCommand,
   async function ({ flags }) {
@@ -159,6 +170,11 @@ const cmd = command(
     const peerThreshold = flags.topKPeerThreshold || DEFAULT_TOP_K_PEER_THRESHOLD
     const referrerThreshold = flags.topKReferrerThreshold || DEFAULT_TOP_K_REFERRER_THRESHOLD
 
+    const pushNotifRateLimit = {
+      capacity: flags.pushNotificationsRateLimitCapacity || DEFAULT_PUSH_NOTIF_RATE_LIMIT_CAPACITY,
+      intervalMs: flags.pushNotificationsRateLimitInterval || DEFAULT_PUSH_NOTIF_RATE_LIMIT_INTERVAL
+    }
+
     const adminRpcRouter = new ProtomuxRPCRouter()
     adminRpcRouter.use(
       defaultMiddleware({
@@ -179,6 +195,9 @@ const cmd = command(
       adminRouter: adminRpcRouter,
       ipBanListKeys,
       pushGatewayKeys,
+      pushGatewayPoolOpts: {
+        rateLimit: pushNotifRateLimit
+      },
       topK: {
         bucketCount: 6,
         bucketTime: 10_000,
