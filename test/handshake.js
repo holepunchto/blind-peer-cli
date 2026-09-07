@@ -19,9 +19,7 @@ test('logs contain handshake of the connection', async (t) => {
     '--debug'
   )
 
-  const blindPeerKey = JSON.parse(await waitForOutput(proc, 'Listening at'))
-    .msg.split(' ')
-    .pop()
+  const blindPeerKey = JSON.parse(await waitForOutput(proc, 'Listening')).publicKey
 
   const swarm = new Hyperswarm({ bootstrap })
   const store = new Corestore(path.join(await t.tmp(), 'blind-peering'))

@@ -143,7 +143,7 @@ const cmd = command(
     logger.info('Starting blind peer')
 
     const handleFatalError = (err, errType) => {
-      logger.fatal(`${errType}: ${err?.stack}`)
+      logger.fatal(err, errType)
       process.exit(1)
     }
     process.on('uncaughtException', (err) => handleFatalError(err, 'uncaughtException'))
@@ -208,23 +208,28 @@ const cmd = command(
     })
 
     blindPeer.on('flush-error', (e) => {
-      logger.warn(`Error while flushing the db: ${e.stack}`)
+      logger.warn(e, 'Error while flushing the db')
     })
     blindPeer.on('notification-error', async (e, connection, request) => {
+      const handshake = getHandshake(connection)
       logger.warn(
-        getHandshake(connection),
-        `Notification error: discoveryKey=%s publicKey=%s %s`,
-        b4a.toString(request.destination.discoveryKey, 'hex'),
-        idEnc.encode(connection.remotePublicKey),
-        e.stack
+        {
+          ...handshake,
+          discoveryKey: b4a.toString(request.destination.discoveryKey, 'hex'),
+          publicKey: idEnc.encode(connection.remotePublicKey),
+          err: e
+        },
+        'Notification error'
       )
       if (flags.debug) {
         try {
           logger.debug(
-            getHandshake(connection),
-            'Notification error: ip %s publicKey %s',
-            connection.rawStream.remoteHost,
-            idEnc.encode(connection.remotePublicKey)
+            {
+              ...handshake,
+              ip: connection.rawStream.remoteHost,
+              publicKey: idEnc.encode(connection.remotePublicKey)
+            },
+            'Notification error: ip'
           )
 
           const requestJson = {
@@ -238,7 +243,7 @@ const cmd = command(
               discoveryKey: b4a.toString(request.destination.discoveryKey, 'hex')
             }
           }
-          logger.debug(getHandshake(connection), `Notification error: request %o`, requestJson)
+          logger.debug({ ...handshake, request: requestJson }, 'Notification error: request')
 
           const core = await blindPeer.store.get(request.block.key)
           await core.ready()
@@ -250,7 +255,7 @@ const cmd = command(
               key: idEnc.encode(coreInfo.key),
               discoveryKey: idEnc.encode(coreInfo.discoveryKey)
             }
-            logger.debug(getHandshake(connection), `Notification error: core.info %o`, coreInfoJson)
+            logger.debug({ ...handshake, coreInfo: coreInfoJson }, 'Notification error: core.info')
             const corePeersJson = core.peers.slice(0, 10).map((peer) => ({
               remotePublicKey: idEnc.encode(peer.remotePublicKey),
               remoteLength: peer.remoteLength,
@@ -259,14 +264,10 @@ const cmd = command(
               remoteCanUpgrade: peer.remoteCanUpgrade
             }))
             logger.debug(
-              getHandshake(connection),
-              `Notification error: core.peers.length ${core.peers.length}`
+              { ...handshake, peersLength: core.peers.length },
+              'Notification error: core.peers.length'
             )
-            logger.debug(
-              getHandshake(connection),
-              `Notification error: core.peers %o`,
-              corePeersJson
-            )
+            logger.debug({ ...handshake, peers: corePeersJson }, 'Notification error: core.peers')
           } finally {
             await core.close()
           }
@@ -277,197 +278,239 @@ const cmd = command(
               key: idEnc.encode(record.key),
               referrer: record.referrer ? idEnc.encode(record.referrer) : null
             }
-            logger.debug(
-              getHandshake(connection),
-              `Notification error:: core record %o`,
-              recordJson
-            )
+            logger.debug({ ...handshake, record: recordJson }, 'Notification error: core record')
           }
         } catch (e) {
-          logger.warn(e.stack)
+          logger.warn(e, 'Notification error: debug failed')
         }
       }
     })
     blindPeer.on('notification-error-snapshot', (snapshot) => {
-      logger.warn('Notification error: core snapshot %o', snapshot)
+      logger.warn({ snapshot }, 'Notification error: core snapshot')
     })
     blindPeer.on('warn', (e) => {
-      logger.warn('warn: %s', e.stack)
+      logger.warn(e, 'warn')
     })
 
     blindPeer.on('notification-rx', (request, stream) => {
       try {
         logger.debug(
-          getHandshake(stream),
-          `Notification request received from ${streamToStr(stream)} for index: ${request.block.index} of core: ${idEnc.normalize(request.block.key)} (discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))}) in room key: ${idEnc.normalize(request.destination.key)} (room discovery key: ${idEnc.normalize(request.destination.discoveryKey)})`
+          {
+            ...getHandshake(stream),
+            publicKey: streamToStr(stream),
+            blockIndex: request.block.index,
+            core: idEnc.normalize(request.block.key),
+            discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
+            roomKey: idEnc.normalize(request.destination.key),
+            roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey)
+          },
+          'Notification request received'
         )
       } catch (e) {
-        logger.warn(e.stack)
+        logger.warn(e, 'Failed to log notification request')
       }
     })
 
     blindPeer.on('notification-sent', (request, payload, stream, runtime) => {
       try {
         logger.info(
-          getHandshake(stream),
-          `Notification sent from ${streamToStr(stream)} for index: ${request.block.index} of core discovery key: ${idEnc.normalize(hypCrypto.discoveryKey(request.block.key))} in room discovery key: ${idEnc.normalize(request.destination.discoveryKey)} (runtime: ${runtime}ms)`
+          {
+            ...getHandshake(stream),
+            publicKey: streamToStr(stream),
+            blockIndex: request.block.index,
+            discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
+            roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey),
+            runtime
+          },
+          'Notification sent'
         )
       } catch (e) {
-        logger.warn(e.stack)
+        logger.warn(e, 'Failed to log notification sent')
       }
     })
 
     blindPeer.on('muxer-paired', (stream) => {
-      logger.debug(getHandshake(stream), `Paired muxer with peer ${streamToStr(stream)}`)
+      logger.debug(
+        { ...getHandshake(stream), publicKey: streamToStr(stream) },
+        'Paired muxer with peer'
+      )
     })
     blindPeer.on('muxer-error', (e, stream) => {
       logger.info(
-        getHandshake(stream),
-        `Error while running the muxer protocol: ${e.stack} ${streamToStr(stream)}`
+        { ...getHandshake(stream), publicKey: streamToStr(stream), err: e },
+        'Error while running the muxer protocol'
       )
     })
     blindPeer.on('add-cores-received', (stream, request) => {
       logger.debug(
-        getHandshake(stream),
-        `add-cores request received from peer %s with referrer %s and cores (%s)`,
-        streamToStr(stream),
-        request.referrer ? idEnc.encode(request.referrer) : 'null',
-        request.cores.map((core) => idEnc.encode(hypCrypto.discoveryKey(core.key))).join(', ')
+        {
+          ...getHandshake(stream),
+          publicKey: streamToStr(stream),
+          referrer: request.referrer ? idEnc.encode(request.referrer) : null,
+          cores: request.cores.map((core) => idEnc.encode(hypCrypto.discoveryKey(core.key)))
+        },
+        'add-cores request received'
       )
     })
     blindPeer.on('add-cores-done', (stream) => {
       logger.debug(
-        getHandshake(stream),
-        `add-cores request handled from peer ${streamToStr(stream)}`
+        { ...getHandshake(stream), publicKey: streamToStr(stream) },
+        'add-cores request handled'
       )
     })
     blindPeer.topKByPeer.on('spike', (key, count) => {
-      logger.info(`top-k by peer spiked: key=${key} count=${count}`)
+      logger.info({ key, count }, 'top-k by peer spiked')
     })
     blindPeer.topKByReferrer.on('spike', (key, count) => {
-      logger.info(`top-k by referrrer spiked: key=${key} count=${count}`)
+      logger.info({ key, count }, 'top-k by referrrer spiked')
     })
     blindPeer.topKByIp.on('spike', (key, count) => {
-      logger.debug(`top-k by ip spiked: key=${key} count=${count}`)
+      logger.debug({ key, count }, 'top-k by ip spiked')
     })
 
     blindPeer.on('add-new-core', (record, _, stream) => {
       try {
+        const log = {
+          ...getHandshake(stream),
+          publicKey: streamToStr(stream),
+          ...recordToLog(record)
+        }
         if (record.announce) {
-          logger.info(
-            getHandshake(stream),
-            `add-core request received from peer ${streamToStr(stream)} for record ${recordToStr(record)}`
-          )
+          logger.info(log, 'add-core request received')
         } else {
-          logger.debug(
-            getHandshake(stream),
-            `add-core request received from peer ${streamToStr(stream)} for record ${recordToStr(record)}`
-          )
+          logger.debug(log, 'add-core request received')
         }
       } catch (e) {
-        logger.info(`Invalid add-core request received: ${e.stack}`)
-        logger.info(record)
+        logger.info(e, 'Invalid add-core request received')
       }
     })
     blindPeer.on('delete-blocked', (stream, { key }) => {
       logger.info(
-        getHandshake(stream),
-        `Blocked delete-core request from untrusted peer ${streamToStr(stream)} for core ${idEnc.normalize(key)}`
+        { ...getHandshake(stream), publicKey: streamToStr(stream), key: idEnc.normalize(key) },
+        'Blocked delete-core request from untrusted peer'
       )
     })
     blindPeer.on('delete-core', (stream, { key, existing }) => {
       logger.info(
-        getHandshake(stream),
-        `Received delete-core request from trusted peer ${streamToStr(stream)} for core ${idEnc.normalize(key)}. Existing: ${existing}`
+        {
+          ...getHandshake(stream),
+          publicKey: streamToStr(stream),
+          key: idEnc.normalize(key),
+          existing
+        },
+        'Received delete-core request from trusted peer'
       )
     })
     blindPeer.on('delete-core-end', (stream, { key, announced }) => {
       logger.info(
-        getHandshake(stream),
-        `Completed delete-core request from trusted peer ${streamToStr(stream)} for core ${idEnc.normalize(key)}. Was announced: ${announced}`
+        {
+          ...getHandshake(stream),
+          publicKey: streamToStr(stream),
+          key: idEnc.normalize(key),
+          announced
+        },
+        'Completed delete-core request from trusted peer'
       )
     })
 
     blindPeer.on('downgrade-announce', ({ record, remotePublicKey }) => {
       try {
         logger.info(
-          `Downgraded announce for peer ${idEnc.normalize(remotePublicKey)} because the peer is not trusted (Original: ${recordToStr(record)})`
+          { publicKey: idEnc.normalize(remotePublicKey), ...recordToLog(record) },
+          'Downgraded announce because the peer is not trusted'
         )
       } catch (e) {
-        logger.error(`Unexpected error while logging downgrade-announce: ${e.stack}`)
+        logger.error(e, 'Unexpected error while logging downgrade-announce')
       }
     })
     blindPeer.on('add-cores-downgrade-announce', ({ remotePublicKey }) => {
       try {
         logger.info(
-          `Downgraded announce for peer ${idEnc.normalize(remotePublicKey)} because the peer is not trusted)`
+          { publicKey: idEnc.normalize(remotePublicKey) },
+          'Downgraded announce because the peer is not trusted'
         )
       } catch (e) {
-        logger.error(`Unexpected error while logging add-cores-downgrade-announce: ${e.stack}`)
+        logger.error(e, 'Unexpected error while logging add-cores-downgrade-announce')
       }
     })
 
     blindPeer.on('announce-core', (core) => {
-      logger.info(`Started announcing core ${coreToInfo(core, true)}`)
+      logger.info(coreToLog(core, true), 'Started announcing core')
     })
     blindPeer.on('announced-initial-cores', () => {
-      logger.info(`Announced all initial cores`)
+      logger.info('Announced all initial cores')
     })
     blindPeer.on('core-downloaded', (core) => {
-      logger.info(`Announced core fully downloaded: ${coreToInfo(core, true)}`)
+      logger.info(coreToLog(core, true), 'Announced core fully downloaded')
     })
     blindPeer.on('core-append', (core) => {
-      logger.info(`Detected announced-core length update: ${coreToInfo(core, true)}`)
+      logger.info(coreToLog(core, true), 'Detected announced-core length update')
     })
     blindPeer.on('core-client-mode-changed', (core, isClient) => {
-      if (isClient) {
-        logger.info(`Announced-core enabled client mode: ${coreToInfo(core, true)}`)
-      } else {
-        logger.info(`Announced-core disabled client mode: ${coreToInfo(core, true)}`)
-      }
+      logger.info(
+        { ...coreToLog(core, true), isClient },
+        isClient ? 'Announced-core enabled client mode' : 'Announced-core disabled client mode'
+      )
     })
 
     blindPeer.on('gc-start', ({ bytesToClear }) => {
       logger.info(
-        `Starting GC, trying to clear ${byteSize(bytesToClear)} (bytes allocated: ${byteSize(blindPeer.digest.bytesAllocated)} of ${byteSize(blindPeer.maxBytes)})`
+        {
+          bytesToClear: byteSize(bytesToClear),
+          bytesAllocated: byteSize(blindPeer.digest.bytesAllocated),
+          maxBytes: byteSize(blindPeer.maxBytes)
+        },
+        `Starting GC`
       )
     })
     blindPeer.on('gc-done', ({ bytesCleared }) => {
       logger.info(
-        `Completed GC, cleared ${byteSize(bytesCleared)} bytes (bytes allocated: ${byteSize(blindPeer.digest.bytesAllocated)} of ${byteSize(blindPeer.maxBytes)})`
+        {
+          bytesCleared: byteSize(bytesCleared),
+          bytesAllocated: byteSize(blindPeer.digest.bytesAllocated),
+          maxBytes: byteSize(blindPeer.maxBytes)
+        },
+        `Completed GC`
       )
     })
     if (debug) {
       blindPeer.on('core-activity', (core) => {
-        logger.debug(`Core activity for ${coreToInfo(core)}`)
+        logger.debug(coreToLog(core), 'Core activity')
       })
     }
 
     blindPeer.on('invalid-request', (core, err, req, from) => {
-      const address = `${from.stream?.rawStream?.remoteHost}:${from.stream?.rawStream?.remotePort}`
-      const remotePubKey = idEnc.normalize(from.stream.remotePublicKey)
-      const key = idEnc.normalize(core.key)
       logger.warn(
-        getHandshake(from.stream),
-        `Received invalid request for core ${key} from peer ${remotePubKey} at ${address} (${err.stack})`
+        {
+          ...getHandshake(from.stream),
+          publicKey: idEnc.normalize(from.stream.remotePublicKey),
+          ip: from.stream?.rawStream?.remoteHost,
+          port: from.stream?.rawStream?.remotePort,
+          key: idEnc.normalize(core.key),
+          err
+        },
+        'Received invalid request'
       )
     })
 
-    logger.info(`Using storage '${storage}'`)
+    logger.info({ storage }, 'Using storage')
     if (trustedPubKeys.length > 0) {
       logger.info(
-        `Trusted public keys:\n  -${[...blindPeer.trustedPubKeys].map(idEnc.normalize).join('\n  -')}`
+        { trustedPublicKeys: [...blindPeer.trustedPubKeys].map(idEnc.normalize) },
+        'Trusted public keys'
       )
     }
-    if (routerKey) logger.info(`Router public key: ${idEnc.normalize(routerKey)}`)
+    if (routerKey) logger.info({ routerPublicKey: idEnc.normalize(routerKey) }, 'Router public key')
     if (ipBanListKeys.length > 0) {
       logger.info(
-        `IP ban list public keys:\n  -${blindPeer.ipBanLists.map((list) => idEnc.normalize(list.key)).join('\n  -')}`
+        { ipBanListKeys: blindPeer.ipBanLists.map((list) => idEnc.normalize(list.key)) },
+        'IP ban list public keys'
       )
     }
     if (pushGatewayKeys.length > 0) {
       logger.info(
-        `Push gateway public keys:\n  -${blindPeer.pushGatewayKeys.map(idEnc.normalize).join('\n  -')}`
+        { pushGatewayKeys: blindPeer.pushGatewayKeys.map(idEnc.normalize) },
+        'Push gateway public keys'
       )
     }
 
@@ -490,21 +533,22 @@ const cmd = command(
     }
 
     await blindPeer.ready() // needed to be able to access the swarm object
-    logger.info(`Corestore is in ${blindPeer.store.active ? 'active' : 'passive'} mode`)
+    logger.info({ mode: blindPeer.store.active ? 'active' : 'passive' }, 'Corestore mode')
     blindPeer.swarm.on('ban', (peerInfo, err) => {
-      logger.warn(`Banned peer: ${b4a.toString(peerInfo.publicKey, 'hex')}.\n${err.stack}`)
+      logger.warn({ publicKey: b4a.toString(peerInfo.publicKey, 'hex'), err }, 'Banned peer')
     })
     if (debug) {
       blindPeer.swarm.on('connection', (conn, peerInfo) => {
-        const key = idEnc.normalize(peerInfo.publicKey)
-        logger.debug(`Opened connection to ${key}`)
-        conn.on('close', () => logger.debug(`Closed connection to ${key}`))
+        const publicKey = idEnc.normalize(peerInfo.publicKey)
+        logger.debug({ publicKey }, 'Opened connection')
+        conn.on('close', () => logger.debug({ publicKey }, 'Closed connection'))
         conn.on('error', (err) => {
+          const log = { ...getHandshake(conn), publicKey, err }
           if (err.code === 'ECONNRESET') {
-            logger.debug(getHandshake(conn), `Connection error with ${key}: ${err.stack}`)
+            logger.debug(log, 'Connection error')
             return
           }
-          logger.info(getHandshake(conn), `Connection error with ${key}: ${err.stack}`)
+          logger.info(log, 'Connection error')
         })
       })
     }
@@ -519,27 +563,39 @@ const cmd = command(
             if (pendingWrites >= 100) {
               nrBigStreams++
               logger.warn(
-                `Stream ${stream.id} (remote id: ${stream.remoteId}) has ${pendingWrites} pending writes:\nStream JSON: ${JSON.stringify(stream.toJSON(), null, 1)}\nSocket json: ${stream.socket ? JSON.stringify(stream.socket.toJSON(), null, 1) : 'none'}\nhex streamhandle: ${b4a.toString(stream._handle, 'hex')}\nhex socket handle: ${stream.socket ? b4a.toString(stream.socket._handle, 'hex') : 'none'}`
+                {
+                  streamId: stream.id,
+                  remoteId: stream.remoteId,
+                  pendingWrites,
+                  stream: stream.toJSON(),
+                  socket: stream.socket ? stream.socket.toJSON() : null,
+                  streamHandle: b4a.toString(stream._handle, 'hex'),
+                  socketHandle: stream.socket ? b4a.toString(stream.socket._handle, 'hex') : null
+                },
+                'Stream has many pending writes'
               )
             }
           }
           if (nrBigStreams > 0) {
-            logger.warn(`Total streams with many pending writes: ${nrBigStreams}`)
+            logger.warn({ nrBigStreams }, 'Total streams with many pending writes')
           }
         } catch (e) {
           // we don't want to crash the process with our debugging
-          logger.warn(`logStreams errored unexpectedly: ${e.stack}`)
+          logger.warn(e, 'logStreams errored unexpectedly')
         }
       }, 30_000)
     }
 
     await blindPeer.listen()
 
+    const localAddress = blindPeer.swarm.dht.localAddress()
+    logger.info({ host: localAddress.host, port: localAddress.port }, 'Blind peer listening')
     logger.info(
-      `Blind peer listening, local address is ${blindPeer.swarm.dht.localAddress().host}:${blindPeer.swarm.dht.localAddress().port}`
-    )
-    logger.info(
-      `Bytes allocated: ${byteSize(blindPeer.digest.bytesAllocated)} of ${byteSize(blindPeer.maxBytes)}`
+      {
+        bytesAllocated: byteSize(blindPeer.digest.bytesAllocated),
+        maxBytes: byteSize(blindPeer.maxBytes)
+      },
+      `Bytes allocated`
     )
 
     if (flags.controlSocket) {
@@ -551,7 +607,7 @@ const cmd = command(
         await healthProbe.close()
       })
 
-      logger.info(`Health probe listening at ${flags.controlSocket}`)
+      logger.info({ controlSocket: flags.controlSocket }, 'Health probe listening')
     }
 
     if (flags.autodiscoveryRpcKey) {
@@ -609,38 +665,47 @@ const cmd = command(
       await instrumentation.ready()
     }
 
-    logger.info(`Listening at ${idEnc.normalize(blindPeer.publicKey)}`)
-    logger.info(`Encryption public key is ${idEnc.normalize(blindPeer.encryptionPublicKey)}`)
+    logger.info({ publicKey: idEnc.normalize(blindPeer.publicKey) }, 'Listening')
+    logger.info(
+      { encryptionPublicKey: idEnc.normalize(blindPeer.encryptionPublicKey) },
+      'Encryption public key'
+    )
 
     if (flags.autoShutdownMinutes) {
-      const delay = flags.autoShutdownMinutes * (1 + Math.random() / 5)
-      logger.warn(`Automatically shutting down the process in ${delay} minutes`)
+      const delayMinutes = flags.autoShutdownMinutes * (1 + Math.random() / 5)
+      logger.warn({ delayMinutes }, 'Automatically shutting down the process')
       setTimeout(
         () => {
           logger.warn('Auto-shutdown triggered. Shutting down...')
           goodbye.exit()
         },
-        delay * 60 * 1000
+        delayMinutes * 60 * 1000
       )
     }
   }
 )
 
-function recordToStr(record) {
-  const discKey = hypCrypto.discoveryKey(record.key)
-  return `DB Record for discovery key ${idEnc.normalize(discKey)} with priority: ${record.priority}. Announcing? ${record.announce}`
+function recordToLog(record) {
+  return {
+    discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(record.key)),
+    priority: record.priority,
+    announce: record.announce
+  }
 }
 
 function streamToStr(stream) {
-  const pubKey = idEnc.normalize(stream.remotePublicKey)
-  return `${pubKey}`
+  return idEnc.normalize(stream.remotePublicKey)
 }
 
-function coreToInfo(core, includePublicKey = false) {
-  const discKey = hypCrypto.discoveryKey(core.key)
-  let res = `Discovery key ${idEnc.normalize(discKey)} (${core.contiguousLength} / ${core.length}, ${core.peers.length} peers)`
-  if (includePublicKey) res += `. Public key: ${idEnc.normalize(core.key)}`
-  return res
+function coreToLog(core, includePublicKey = false) {
+  const log = {
+    discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(core.key)),
+    contiguousLength: core.contiguousLength,
+    length: core.length,
+    peerCount: core.peers.length
+  }
+  if (includePublicKey) log.publicKey = idEnc.normalize(core.key)
+  return log
 }
 
 function getHandshake(stream) {
