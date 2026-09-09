@@ -91,7 +91,9 @@ test('inspector CLI allows trusted peers and rejects untrusted peers', async (t)
 })
 
 async function runInspectorCli(t, ...args) {
-  const proc = spawn(process.execPath, [INSPECTOR_EXECUTABLE, ...args])
+  const proc = spawn(process.execPath, [INSPECTOR_EXECUTABLE, ...args], {
+    stdio: 'overlapped'
+  })
 
   t.teardown(async () => {
     if (proc.exitCode === null && proc.signalCode === null) {
