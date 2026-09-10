@@ -131,6 +131,14 @@ const cmd = command(
     '--push-notifications-rate-limit-interval [int]',
     `(Advanced) interval in ms for the push notifications rate limit (defaults to ${DEFAULT_PUSH_NOTIF_RATE_LIMIT_INTERVAL})`
   ),
+  flag(
+    '--per-referrer-rate-limit-capacity [int]',
+    '(Advanced) capacity for the per-referrer add-cores rate limit. Must be used with --per-referrer-rate-limit-interval.'
+  ),
+  flag(
+    '--per-referrer-rate-limit-interval [int]',
+    '(Advanced) refill interval in ms for the per-referrer add-cores rate limit. Must be used with --per-referrer-rate-limit-capacity.'
+  ),
 
   flag('--control-socket [path]', 'Listen for Kubernetes exec-probe control RPCs on this socket'),
   readinessProbeCommand,
@@ -175,6 +183,20 @@ const cmd = command(
       intervalMs: flags.pushNotificationsRateLimitInterval || DEFAULT_PUSH_NOTIF_RATE_LIMIT_INTERVAL
     }
 
+    const hasPerReferrerRateLimitCapacity = flags.perReferrerRateLimitCapacity !== undefined
+    const hasPerReferrerRateLimitInterval = flags.perReferrerRateLimitInterval !== undefined
+    if (hasPerReferrerRateLimitCapacity !== hasPerReferrerRateLimitInterval) {
+      throw new Error(
+        '--per-referrer-rate-limit-capacity and --per-referrer-rate-limit-interval must be used together'
+      )
+    }
+    const perReferrerRateLimitParams = hasPerReferrerRateLimitCapacity
+      ? {
+          capacity: parseInt(flags.perReferrerRateLimitCapacity, 10),
+          intervalMs: parseInt(flags.perReferrerRateLimitInterval, 10)
+        }
+      : null
+
     const adminRpcRouter = new ProtomuxRPCRouter()
     adminRpcRouter.use(
       defaultMiddleware({
@@ -198,6 +220,7 @@ const cmd = command(
       pushGatewayPoolOpts: {
         rateLimit: pushNotifRateLimit
       },
+      perReferrerRateLimitParams,
       topK: {
         bucketCount: 6,
         bucketTime: 10_000,
@@ -340,6 +363,9 @@ const cmd = command(
         getHandshake(stream),
         `add-cores request handled from peer ${streamToStr(stream)}`
       )
+    })
+    blindPeer.on('per-referrer-rate-limited', (referrerKey) => {
+      logger.info(`Per-referrer add-cores rate limit reached: referrer=${referrerKey}`)
     })
     blindPeer.topKByPeer.on('spike', (key, count) => {
       logger.info(`top-k by peer spiked: key=${key} count=${count}`)
