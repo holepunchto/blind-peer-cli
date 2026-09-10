@@ -13,6 +13,7 @@ const process = require('process')
 const b4a = require('b4a')
 const hypCrypto = require('hypercore-crypto')
 const BlindPeer = require('blind-peer')
+const { Server: InspectorServer } = require('hyperdht-inspector')
 const { version: ownVersion } = require('./package.json')
 const HealthProbe = require('./lib/health-probe')
 
@@ -61,6 +62,10 @@ const cmd = command(
     '--trusted-peer|-t [trusted-peer]',
     'Public key of a trusted peer (allowed to set announce: true). Can be more than 1.'
   ).multiple(),
+  flag(
+    '--dangerously-enable-inspector',
+    'Enable remote process inspection for trusted peers. Disabled by default.'
+  ),
   flag('--debug|-d', 'Enable debug mode (more logs)'),
   flag(
     '--max-storage|-m [int]',
@@ -490,6 +495,37 @@ const cmd = command(
     }
 
     await blindPeer.ready() // needed to be able to access the swarm object
+
+    if (flags.dangerouslyEnableInspector) {
+      const inspectorRpcRouter = new ProtomuxRPCRouter()
+      inspectorRpcRouter.use(
+        defaultMiddleware({
+          logger: {
+            instance: logger
+          }
+        })
+      )
+      inspectorRpcRouter.use({
+        onrequest: (ctx, next) => {
+          if (!trustedPubKeys.some((key) => b4a.equals(key, ctx.connection.remotePublicKey))) {
+            throw new Error('Only trusted peers can use the admin RPC router')
+          }
+
+          return next()
+        }
+      })
+      const inspectorServer = new InspectorServer(inspectorRpcRouter)
+      await inspectorRpcRouter.ready()
+      goodbye(async () => {
+        logger.info('Closing inspector RPC router')
+        await inspectorRpcRouter.close()
+      })
+      logger.warn('Remote process inspector enabled for trusted peers')
+      blindPeer.swarm.on('connection', (connection) => {
+        inspectorServer.handleConnection(connection)
+      })
+    }
+
     logger.info(`Corestore is in ${blindPeer.store.active ? 'active' : 'passive'} mode`)
     blindPeer.swarm.on('ban', (peerInfo, err) => {
       logger.warn(`Banned peer: ${b4a.toString(peerInfo.publicKey, 'hex')}.\n${err.stack}`)
