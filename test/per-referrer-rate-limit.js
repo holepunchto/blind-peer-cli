@@ -40,9 +40,8 @@ test('limits add-cores requests for the same referrer', async (t) => {
     '--debug'
   )
 
-  const blindPeerKey = JSON.parse(await waitForOutput(proc, 'Listening at'))
-    .msg.split(' ')
-    .pop()
+  const blindPeerKey = JSON.parse(await waitForOutput(proc, 'Listening')).publicKey
+
   const swarm = new Hyperswarm({ bootstrap })
   const store = new Corestore(path.join(await t.tmp(), 'blind-peering'))
   const client = new Client(swarm.dht, store, { keys: [blindPeerKey] })
@@ -61,8 +60,6 @@ test('limits add-cores requests for the same referrer', async (t) => {
   await client.addCore(store.get({ name: 'second' }), { referrer })
 
   const log = JSON.parse(await rateLimited)
-  t.is(
-    log.msg,
-    `Per-referrer add-cores rate limit reached: referrer=${b4a.toString(referrer, 'hex')}`
-  )
+  t.is(log.msg, `Per-referrer add-cores rate limit reached`)
+  t.is(log.referrerKey, b4a.toString(referrer, 'hex'))
 })

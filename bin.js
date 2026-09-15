@@ -382,7 +382,7 @@ const cmd = command(
       )
     })
     blindPeer.on('per-referrer-rate-limited', (referrerKey) => {
-      logger.info(`Per-referrer add-cores rate limit reached: referrer=${referrerKey}`)
+      logger.info({ referrerKey }, `Per-referrer add-cores rate limit reached`)
     })
     blindPeer.topKByPeer.on('spike', (key, count) => {
       logger.info({ key, count }, 'top-k by peer spiked')
