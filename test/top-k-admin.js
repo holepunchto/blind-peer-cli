@@ -23,9 +23,8 @@ test('trusted peer can query top-k admin RPC through the CLI', async (t) => {
     IdEnc.encode(adminKeyPair.publicKey)
   )
 
-  const listeningLine = await waitForOutput(proc, 'Listening at')
-  const rawPublicKey = /"Listening at ([^"]+)"/.exec(listeningLine)[1]
-  const serverPublicKey = IdEnc.decode(rawPublicKey)
+  const listeningLog = JSON.parse(await waitForOutput(proc, 'Listening'))
+  const serverPublicKey = IdEnc.decode(listeningLog.publicKey)
   const adminClient = await setupAdminClient(t, {
     bootstrap,
     serverPublicKey,

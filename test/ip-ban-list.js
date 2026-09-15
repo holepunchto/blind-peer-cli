@@ -28,9 +28,6 @@ test('logs multiple IP ban list public keys through the CLI', async (t) => {
   const log = JSON.parse(line)
 
   // we only test simple logging here, the main logic is already tested in blind-peer
-  t.is(
-    log.msg,
-    `IP ban list public keys:\n  -${firstKey}\n  -${secondKey}`,
-    'logs all submitted IP ban list public keys'
-  )
+  t.is(log.msg, 'IP ban list public keys', 'logs the IP ban list public keys event')
+  t.alike(log.ipBanListKeys, [firstKey, secondKey], 'logs all submitted IP ban list public keys')
 })

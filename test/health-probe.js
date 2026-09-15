@@ -27,7 +27,7 @@ test('readiness-probe command passes against control socket', async (t) => {
   )
 
   // wait for a while for blind-peer to ready
-  await waitForOutput(proc, 'Health probe listening at')
+  await waitForOutput(proc, 'Health probe listening')
 
   const result = await runBlindPeerBin(t, 'readiness-probe', '--control-socket', socketPath)
   t.is(result.exitCode, 0)
