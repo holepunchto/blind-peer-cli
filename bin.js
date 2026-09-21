@@ -287,7 +287,7 @@ const cmd = command(
               remoteCanUpgrade: peer.remoteCanUpgrade
             }))
             logger.debug(
-              { ...handshake, peersLength: core.peers.length, peers: corePeersJson },
+              { ...handshake, peerCount: core.peers.length, peers: corePeersJson },
               'Notification error: peers'
             )
           } finally {
@@ -392,7 +392,7 @@ const cmd = command(
       logger.info({ publicKey, count }, 'top-k by peer spiked')
     })
     blindPeer.topKByReferrer.on('spike', (referrer, count) => {
-      logger.info({ referrer, count }, 'top-k by referrrer spiked')
+      logger.info({ referrer, count }, 'top-k by referrer spiked')
     })
     blindPeer.topKByIp.on('spike', (ip, count) => {
       logger.debug({ ip, count }, 'top-k by ip spiked')
