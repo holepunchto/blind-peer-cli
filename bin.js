@@ -381,7 +381,7 @@ const cmd = command(
       )
     })
     blindPeer.on('per-referrer-rate-limited', (referrerKey) => {
-      logger.info({ referrerKey }, `Per-referrer add-cores rate limit reached`)
+      logger.debug({ referrerKey }, `Per-referrer add-cores rate limit reached`)
     })
     blindPeer.topKByPeer.on('spike', (key, count) => {
       logger.info({ key, count }, 'top-k by peer spiked')
@@ -564,16 +564,16 @@ const cmd = command(
     })
     if (debug) {
       blindPeer.swarm.on('connection', (conn, peerInfo) => {
-        const publicKey = idEnc.normalize(peerInfo.publicKey)
-        logger.debug({ publicKey }, 'Opened connection')
-        conn.on('close', () => logger.debug({ publicKey }, 'Closed connection'))
+        const log = { ...getHandshake(conn), publicKey: idEnc.normalize(peerInfo.publicKey) }
+        logger.debug(log, 'Opened connection')
+        conn.on('close', () => logger.debug(log, 'Closed connection'))
+        conn.on('warning', (err) => logger.debug({ ...log, err }, 'Connection warning'))
         conn.on('error', (err) => {
-          const log = { ...getHandshake(conn), publicKey, err }
           if (err.code === 'ECONNRESET') {
-            logger.debug(log, 'Connection error')
+            logger.debug({ ...log, err }, 'Connection error')
             return
           }
-          logger.info(log, 'Connection error')
+          logger.info({ ...log, err }, 'Connection error')
         })
       })
     }
