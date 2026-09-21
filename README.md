@@ -47,9 +47,7 @@ When started, ndjson (pino) will be emitted for events. An example startup will 
 
 ```jsonl
 {"level":30,"time":1751662694931,"pid":96069,"hostname":"L293","msg":"Starting blind peer"}
-{"level":30,"time":1751662694932,"pid":96069,"hostname":"L293","msg":"Using storage 'blind-peer'"}
-{"level":30,"time":1751662696936,"pid":96069,"hostname":"L293","msg":"Blind peer listening, local address is 10.0.0.214:49741"}
-{"level":30,"time":1751662696936,"pid":96069,"hostname":"L293","msg":"Bytes allocated: 0B of 100GB"}
-{"level":30,"time":1751662696936,"pid":96069,"hostname":"L293","msg":"Listening at es4n7ty45odd1udfqyi9xz58mrbheuhdnxgdufsn9gz6e5uhsqco"}
-{"level":30,"time":1751662696936,"pid":96069,"hostname":"L293","msg":"Encryption public key is ur7d9r7s3zf1ryibixt5139bep67y94s5bg4gckzo1p6qgtwwfyy"}
+{"level":30,"time":1751662694932,"pid":96069,"hostname":"L293","storage":"blind-peer","msg":"Using storage"}
+{"level":30,"time":1751662696936,"pid":96069,"hostname":"L293","host":"10.0.0.214","port":49741,"bytesAllocated":"0B","maxBytes":"100GB","msg":"Blind peer listening"}
+{"level":30,"time":1751662696936,"pid":96069,"hostname":"L293","publicKey":"es4n7ty45odd1udfqyi9xz58mrbheuhdnxgdufsn9gz6e5uhsqco","encryptionPublicKey":"ur7d9r7s3zf1ryibixt5139bep67y94s5bg4gckzo1p6qgtwwfyy","msg":"Listening"}
 ```
