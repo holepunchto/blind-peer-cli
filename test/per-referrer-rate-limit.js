@@ -1,7 +1,7 @@
 const path = require('path')
 const test = require('brittle')
-const b4a = require('b4a')
 const crypto = require('hypercore-crypto')
+const idEnc = require('hypercore-id-encoding')
 const createTestnet = require('hyperdht/testnet')
 const Hyperswarm = require('hyperswarm')
 const Corestore = require('corestore')
@@ -61,5 +61,5 @@ test('limits add-cores requests for the same referrer', async (t) => {
 
   const log = JSON.parse(await rateLimited)
   t.is(log.msg, `Per-referrer add-cores rate limit reached`)
-  t.is(log.referrerKey, b4a.toString(referrer, 'hex'))
+  t.is(log.referrer, idEnc.normalize(referrer))
 })

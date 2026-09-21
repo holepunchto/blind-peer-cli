@@ -238,8 +238,8 @@ const cmd = command(
       logger.warn(
         {
           ...handshake,
-          discoveryKey: b4a.toString(request.destination.discoveryKey, 'hex'),
-          publicKey: idEnc.encode(connection.remotePublicKey),
+          roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey),
+          publicKey: streamToStr(connection),
           err: e
         },
         'Notification error'
@@ -250,7 +250,7 @@ const cmd = command(
             {
               ...handshake,
               ip: connection.rawStream.remoteHost,
-              publicKey: idEnc.encode(connection.remotePublicKey)
+              publicKey: streamToStr(connection)
             },
             'Notification error: ip'
           )
@@ -258,12 +258,12 @@ const cmd = command(
           const requestJson = {
             block: {
               ...request.block,
-              key: idEnc.encode(request.block.key)
+              key: idEnc.normalize(request.block.key)
             },
             destination: {
               ...request.destination,
-              key: idEnc.encode(request.destination.key),
-              discoveryKey: b4a.toString(request.destination.discoveryKey, 'hex')
+              key: idEnc.normalize(request.destination.key),
+              discoveryKey: idEnc.normalize(request.destination.discoveryKey)
             }
           }
           logger.debug({ ...handshake, request: requestJson }, 'Notification error: request')
@@ -275,12 +275,12 @@ const cmd = command(
             const coreInfo = await core.info()
             const coreInfoJson = {
               ...coreInfo,
-              key: idEnc.encode(coreInfo.key),
-              discoveryKey: idEnc.encode(coreInfo.discoveryKey)
+              key: idEnc.normalize(coreInfo.key),
+              discoveryKey: idEnc.normalize(coreInfo.discoveryKey)
             }
             logger.debug({ ...handshake, coreInfo: coreInfoJson }, 'Notification error: core.info')
             const corePeersJson = core.peers.slice(0, 10).map((peer) => ({
-              remotePublicKey: idEnc.encode(peer.remotePublicKey),
+              remotePublicKey: idEnc.normalize(peer.remotePublicKey),
               remoteLength: peer.remoteLength,
               remoteContiguousLength: peer.remoteContiguousLength,
               remoteFork: peer.remoteFork,
@@ -297,8 +297,8 @@ const cmd = command(
           if (record) {
             const recordJson = {
               ...record,
-              key: idEnc.encode(record.key),
-              referrer: record.referrer ? idEnc.encode(record.referrer) : null
+              key: idEnc.normalize(record.key),
+              referrer: record.referrer ? idEnc.normalize(record.referrer) : null
             }
             logger.debug({ ...handshake, record: recordJson }, 'Notification error: core record')
           }
@@ -321,7 +321,7 @@ const cmd = command(
             ...getHandshake(stream),
             publicKey: streamToStr(stream),
             blockIndex: request.block.index,
-            core: idEnc.normalize(request.block.key),
+            key: idEnc.normalize(request.block.key),
             discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
             roomKey: idEnc.normalize(request.destination.key),
             roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey)
@@ -368,8 +368,10 @@ const cmd = command(
         {
           ...getHandshake(stream),
           publicKey: streamToStr(stream),
-          referrer: request.referrer ? idEnc.encode(request.referrer) : null,
-          cores: request.cores.map((core) => idEnc.encode(hypCrypto.discoveryKey(core.key)))
+          referrer: request.referrer ? idEnc.normalize(request.referrer) : null,
+          discoveryKeys: request.cores.map((core) =>
+            idEnc.normalize(hypCrypto.discoveryKey(core.key))
+          )
         },
         'add-cores request received'
       )
@@ -380,17 +382,20 @@ const cmd = command(
         'add-cores request handled'
       )
     })
-    blindPeer.on('per-referrer-rate-limited', (referrerKey) => {
-      logger.debug({ referrerKey }, `Per-referrer add-cores rate limit reached`)
+    blindPeer.on('per-referrer-rate-limited', (referrer) => {
+      logger.debug(
+        { referrer: idEnc.normalize(referrer) },
+        `Per-referrer add-cores rate limit reached`
+      )
     })
-    blindPeer.topKByPeer.on('spike', (key, count) => {
-      logger.info({ key, count }, 'top-k by peer spiked')
+    blindPeer.topKByPeer.on('spike', (publicKey, count) => {
+      logger.info({ publicKey, count }, 'top-k by peer spiked')
     })
-    blindPeer.topKByReferrer.on('spike', (key, count) => {
-      logger.info({ key, count }, 'top-k by referrrer spiked')
+    blindPeer.topKByReferrer.on('spike', (referrer, count) => {
+      logger.info({ referrer, count }, 'top-k by referrrer spiked')
     })
-    blindPeer.topKByIp.on('spike', (key, count) => {
-      logger.debug({ key, count }, 'top-k by ip spiked')
+    blindPeer.topKByIp.on('spike', (ip, count) => {
+      logger.debug({ ip, count }, 'top-k by ip spiked')
     })
 
     blindPeer.on('add-new-core', (record, _, stream) => {
@@ -508,7 +513,7 @@ const cmd = command(
       logger.warn(
         {
           ...getHandshake(from.stream),
-          publicKey: idEnc.normalize(from.stream.remotePublicKey),
+          publicKey: streamToStr(from.stream),
           ip: from.stream?.rawStream?.remoteHost,
           port: from.stream?.rawStream?.remotePort,
           key: idEnc.normalize(core.key),
@@ -560,7 +565,7 @@ const cmd = command(
     await blindPeer.ready() // needed to be able to access the swarm object
     logger.info({ mode: blindPeer.store.active ? 'active' : 'passive' }, 'Corestore mode')
     blindPeer.swarm.on('ban', (peerInfo, err) => {
-      logger.warn({ publicKey: b4a.toString(peerInfo.publicKey, 'hex'), err }, 'Banned peer')
+      logger.warn({ publicKey: idEnc.normalize(peerInfo.publicKey), err }, 'Banned peer')
     })
     if (debug) {
       blindPeer.swarm.on('connection', (conn, peerInfo) => {
@@ -725,14 +730,14 @@ function streamToStr(stream) {
   return idEnc.normalize(stream.remotePublicKey)
 }
 
-function coreToLog(core, includePublicKey = false) {
+function coreToLog(core, includeKey = false) {
   const log = {
     discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(core.key)),
     contiguousLength: core.contiguousLength,
     length: core.length,
     peerCount: core.peers.length
   }
-  if (includePublicKey) log.publicKey = idEnc.normalize(core.key)
+  if (includeKey) log.key = idEnc.normalize(core.key)
   return log
 }
 
