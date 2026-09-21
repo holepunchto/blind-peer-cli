@@ -287,10 +287,9 @@ const cmd = command(
               remoteCanUpgrade: peer.remoteCanUpgrade
             }))
             logger.debug(
-              { ...handshake, peersLength: core.peers.length },
-              'Notification error: core.peers.length'
+              { ...handshake, peersLength: core.peers.length, peers: corePeersJson },
+              'Notification error: peers'
             )
-            logger.debug({ ...handshake, peers: corePeersJson }, 'Notification error: core.peers')
           } finally {
             await core.close()
           }
@@ -615,13 +614,14 @@ const cmd = command(
     await blindPeer.listen()
 
     const localAddress = blindPeer.swarm.dht.localAddress()
-    logger.info({ host: localAddress.host, port: localAddress.port }, 'Blind peer listening')
     logger.info(
       {
+        host: localAddress.host,
+        port: localAddress.port,
         bytesAllocated: byteSize(blindPeer.digest.bytesAllocated),
         maxBytes: byteSize(blindPeer.maxBytes)
       },
-      `Bytes allocated`
+      'Blind peer listening'
     )
 
     if (flags.controlSocket) {
@@ -691,10 +691,12 @@ const cmd = command(
       await instrumentation.ready()
     }
 
-    logger.info({ publicKey: idEnc.normalize(blindPeer.publicKey) }, 'Listening')
     logger.info(
-      { encryptionPublicKey: idEnc.normalize(blindPeer.encryptionPublicKey) },
-      'Encryption public key'
+      {
+        publicKey: idEnc.normalize(blindPeer.publicKey),
+        encryptionPublicKey: idEnc.normalize(blindPeer.encryptionPublicKey)
+      },
+      'Listening'
     )
 
     if (flags.autoShutdownMinutes) {
