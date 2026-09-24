@@ -34,8 +34,8 @@ test('inspector CLI allows trusted peers and rejects untrusted peers', async (t)
     '--dangerously-enable-inspector'
   )
 
-  const listeningLine = await waitForOutput(proc, 'Listening at')
-  const rawPublicKey = /"Listening at ([^"]+)"/.exec(listeningLine)[1]
+  const listeningLine = await waitForOutput(proc, 'Listening')
+  const { publicKey: rawPublicKey } = JSON.parse(listeningLine)
   const serverPublicKey = IdEnc.decode(rawPublicKey)
   const profilePath = path.join(dir, 'profile.cpuprofile')
 
