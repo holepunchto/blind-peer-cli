@@ -144,8 +144,11 @@ const cmd = command(
     '--per-referrer-rate-limit-interval [int]',
     '(Advanced) refill interval in ms for the per-referrer add-cores rate limit. Must be used with --per-referrer-rate-limit-capacity.'
   ),
-
   flag('--control-socket [path]', 'Listen for Kubernetes exec-probe control RPCs on this socket'),
+  flag(
+    '--enable-buffer-pool',
+    '(Advanced, temporary flag) enable using buffer slabs from a global pool.'
+  ),
   readinessProbeCommand,
   async function ({ flags }) {
     const debug = flags.debug
@@ -154,6 +157,12 @@ const cmd = command(
       name: 'blind-peer'
     })
     logger.info('Starting blind peer')
+
+    if (flags.enableBufferPool) {
+      logger.info(`Buffer pool enabled. Size: ${Buffer.poolSize}`)
+    } else {
+      Buffer.poolSize = 0
+    }
 
     const handleFatalError = (err, errType) => {
       logger.fatal(err, errType)
