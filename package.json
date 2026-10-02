@@ -47,7 +47,7 @@
     "pino": "^9.9.5",
     "pino-bare": "~0.0.2",
     "protomux-rpc-middleware": "^1.0.0",
-    "protomux-rpc-router": "^1.2.0",
+    "protomux-rpc-router": "holepunchto/protomux-rpc-router#metric-prefix",
     "tiny-byte-size": "^1.1.0"
   },
   "devDependencies": {

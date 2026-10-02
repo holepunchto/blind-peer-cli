@@ -579,8 +579,9 @@ const cmd = command(
     await blindPeer.ready() // needed to be able to access the swarm object
     logger.info({ mode: blindPeer.store.active ? 'active' : 'passive' }, 'Corestore mode')
 
+    let inspectorRpcRouter = null
     if (flags.dangerouslyEnableInspector) {
-      const inspectorRpcRouter = new ProtomuxRPCRouter()
+      inspectorRpcRouter = new ProtomuxRPCRouter()
       inspectorRpcRouter.use(
         defaultMiddleware({
           logger: {
@@ -737,6 +738,10 @@ const cmd = command(
       })
 
       blindPeer.registerMetrics(instrumentation.promClient)
+      if (inspectorRpcRouter) {
+        inspectorRpcRouter.registerMetrics(instrumentation.promClient, { prefix: 'inspector_' })
+      }
+
       instrumentation.registerLogger(logger)
       await instrumentation.ready()
     }
