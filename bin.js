@@ -272,7 +272,7 @@ const cmd = command(
           const requestJson = {
             block: {
               ...request.block,
-              key: idEnc.normalize(request.block.key)
+              discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key))
             },
             destination: {
               ...request.destination,
@@ -426,7 +426,7 @@ const cmd = command(
     })
     blindPeer.on('delete-blocked', (stream, { key }) => {
       logger.info(
-        { ...getHandshake(stream), publicKey: streamToStr(stream), key: idEnc.normalize(key) },
+        { ...getHandshake(stream), publicKey: streamToStr(stream), discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(key) },
         'Blocked delete-core request from untrusted peer'
       )
     })
@@ -435,7 +435,7 @@ const cmd = command(
         {
           ...getHandshake(stream),
           publicKey: streamToStr(stream),
-          key: idEnc.normalize(key),
+          discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(key)),
           existing
         },
         'Received delete-core request from trusted peer'
@@ -446,7 +446,7 @@ const cmd = command(
         {
           ...getHandshake(stream),
           publicKey: streamToStr(stream),
-          key: idEnc.normalize(key),
+          discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(key)),
           announced
         },
         'Completed delete-core request from trusted peer'
@@ -526,7 +526,7 @@ const cmd = command(
           publicKey: streamToStr(from.stream),
           ip: from.stream?.rawStream?.remoteHost,
           port: from.stream?.rawStream?.remotePort,
-          key: idEnc.normalize(core.key),
+          discoveryKey: idEnc.normalize(core.discoveryKey),
           err
         },
         'Received invalid request'
