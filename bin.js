@@ -276,7 +276,6 @@ const cmd = command(
             },
             destination: {
               ...request.destination,
-              key: idEnc.normalize(request.destination.key),
               discoveryKey: idEnc.normalize(request.destination.discoveryKey)
             }
           }
@@ -289,7 +288,6 @@ const cmd = command(
             const coreInfo = await core.info()
             const coreInfoJson = {
               ...coreInfo,
-              key: idEnc.normalize(coreInfo.key),
               discoveryKey: idEnc.normalize(coreInfo.discoveryKey)
             }
             logger.debug({ ...handshake, coreInfo: coreInfoJson }, 'Notification error: core.info')
@@ -311,7 +309,7 @@ const cmd = command(
           if (record) {
             const recordJson = {
               ...record,
-              key: idEnc.normalize(record.key),
+              discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(record.key)),
               referrer: record.referrer ? idEnc.normalize(record.referrer) : null
             }
             logger.debug({ ...handshake, record: recordJson }, 'Notification error: core record')
@@ -335,9 +333,7 @@ const cmd = command(
             ...getHandshake(stream),
             publicKey: streamToStr(stream),
             blockIndex: request.block.index,
-            key: idEnc.normalize(request.block.key),
             discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
-            roomKey: idEnc.normalize(request.destination.key),
             roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey)
           },
           'Notification request received'
