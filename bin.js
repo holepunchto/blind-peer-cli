@@ -426,7 +426,11 @@ const cmd = command(
     })
     blindPeer.on('delete-blocked', (stream, { key }) => {
       logger.info(
-        { ...getHandshake(stream), publicKey: streamToStr(stream), discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(key) },
+        {
+          ...getHandshake(stream),
+          publicKey: streamToStr(stream),
+          discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(key))
+        },
         'Blocked delete-core request from untrusted peer'
       )
     })
