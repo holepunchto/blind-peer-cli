@@ -272,11 +272,10 @@ const cmd = command(
           const requestJson = {
             block: {
               ...request.block,
-              key: idEnc.normalize(request.block.key)
+              discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key))
             },
             destination: {
               ...request.destination,
-              key: idEnc.normalize(request.destination.key),
               discoveryKey: idEnc.normalize(request.destination.discoveryKey)
             }
           }
@@ -289,7 +288,6 @@ const cmd = command(
             const coreInfo = await core.info()
             const coreInfoJson = {
               ...coreInfo,
-              key: idEnc.normalize(coreInfo.key),
               discoveryKey: idEnc.normalize(coreInfo.discoveryKey)
             }
             logger.debug({ ...handshake, coreInfo: coreInfoJson }, 'Notification error: core.info')
@@ -311,7 +309,7 @@ const cmd = command(
           if (record) {
             const recordJson = {
               ...record,
-              key: idEnc.normalize(record.key),
+              discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(record.key)),
               referrer: record.referrer ? idEnc.normalize(record.referrer) : null
             }
             logger.debug({ ...handshake, record: recordJson }, 'Notification error: core record')
@@ -335,9 +333,7 @@ const cmd = command(
             ...getHandshake(stream),
             publicKey: streamToStr(stream),
             blockIndex: request.block.index,
-            key: idEnc.normalize(request.block.key),
             discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
-            roomKey: idEnc.normalize(request.destination.key),
             roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey)
           },
           'Notification request received'
@@ -430,7 +426,11 @@ const cmd = command(
     })
     blindPeer.on('delete-blocked', (stream, { key }) => {
       logger.info(
-        { ...getHandshake(stream), publicKey: streamToStr(stream), key: idEnc.normalize(key) },
+        {
+          ...getHandshake(stream),
+          publicKey: streamToStr(stream),
+          discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(key))
+        },
         'Blocked delete-core request from untrusted peer'
       )
     })
@@ -439,7 +439,7 @@ const cmd = command(
         {
           ...getHandshake(stream),
           publicKey: streamToStr(stream),
-          key: idEnc.normalize(key),
+          discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(key)),
           existing
         },
         'Received delete-core request from trusted peer'
@@ -450,7 +450,7 @@ const cmd = command(
         {
           ...getHandshake(stream),
           publicKey: streamToStr(stream),
-          key: idEnc.normalize(key),
+          discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(key)),
           announced
         },
         'Completed delete-core request from trusted peer'
@@ -530,7 +530,7 @@ const cmd = command(
           publicKey: streamToStr(from.stream),
           ip: from.stream?.rawStream?.remoteHost,
           port: from.stream?.rawStream?.remotePort,
-          key: idEnc.normalize(core.key),
+          discoveryKey: idEnc.normalize(core.discoveryKey),
           err
         },
         'Received invalid request'
