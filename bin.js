@@ -272,10 +272,12 @@ const cmd = command(
           const requestJson = {
             block: {
               ...request.block,
+              key: undefined,
               discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key))
             },
             destination: {
               ...request.destination,
+              key: undefined,
               discoveryKey: idEnc.normalize(request.destination.discoveryKey)
             }
           }
@@ -288,6 +290,7 @@ const cmd = command(
             const coreInfo = await core.info()
             const coreInfoJson = {
               ...coreInfo,
+              key: undefined,
               discoveryKey: idEnc.normalize(coreInfo.discoveryKey)
             }
             logger.debug({ ...handshake, coreInfo: coreInfoJson }, 'Notification error: core.info')
@@ -309,6 +312,7 @@ const cmd = command(
           if (record) {
             const recordJson = {
               ...record,
+              key: undefined,
               discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(record.key)),
               referrer: record.referrer ? idEnc.normalize(record.referrer) : null
             }
@@ -479,20 +483,20 @@ const cmd = command(
     })
 
     blindPeer.on('announce-core', (core) => {
-      logger.info(coreToLog(core, true), 'Started announcing core')
+      logger.info(coreToLog(core), 'Started announcing core')
     })
     blindPeer.on('announced-initial-cores', () => {
       logger.info('Announced all initial cores')
     })
     blindPeer.on('core-downloaded', (core) => {
-      logger.info(coreToLog(core, true), 'Announced core fully downloaded')
+      logger.info(coreToLog(core), 'Announced core fully downloaded')
     })
     blindPeer.on('core-append', (core) => {
-      logger.info(coreToLog(core, true), 'Detected announced-core length update')
+      logger.info(coreToLog(core), 'Detected announced-core length update')
     })
     blindPeer.on('core-client-mode-changed', (core, isClient) => {
       logger.info(
-        { ...coreToLog(core, true), isClient },
+        { ...coreToLog(core), isClient },
         isClient ? 'Announced-core enabled client mode' : 'Announced-core disabled client mode'
       )
     })
@@ -775,15 +779,13 @@ function streamToStr(stream) {
   return idEnc.normalize(stream.remotePublicKey)
 }
 
-function coreToLog(core, includeKey = false) {
-  const log = {
+function coreToLog(core) {
+  return {
     discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(core.key)),
     contiguousLength: core.contiguousLength,
     length: core.length,
     peerCount: core.peers.length
   }
-  if (includeKey) log.key = idEnc.normalize(core.key)
-  return log
 }
 
 function getHandshake(stream) {
