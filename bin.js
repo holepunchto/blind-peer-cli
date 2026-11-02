@@ -24,6 +24,7 @@ const DEFAULT_TOP_K_REFERRER_THRESHOLD = 100
 const DEFAULT_TREE_CACHE_SIZE = 100_000
 const DEFAULT_PUSH_NOTIF_RATE_LIMIT_INTERVAL = 10
 const DEFAULT_PUSH_NOTIF_RATE_LIMIT_CAPACITY = 50
+const DEFAULT_METRICS_MAX_CLIENT_VERSIONS = 5
 
 const readinessProbeCommand = command(
   'readiness-probe',
@@ -51,12 +52,12 @@ const cmd = command(
   flag('--storage|-s [path]', 'Storage path, defaults to ./blind-peer'),
   flag(
     '--port|-p [int]',
-    'DHT Port to try to bind to. Only relevant when that port is not firewalled. (defaults to a random port)'
+    'DHT Port to try to bind to. Only relevant when that port is not firewalled. (defaults to a random port).'
   ),
-  flag('--bootstrap [port]', 'Bootstrap port (only relevant for tests)'),
+  flag('--bootstrap [port]', 'Bootstrap port (only relevant for tests).'),
   flag(
     '--active-corestore',
-    'Use an active corestore (useful for blind peers dedicated to seeding)'
+    'Use an active corestore (useful for blind peers dedicated to seeding).'
   ),
   flag(
     '--trusted-peer|-t [trusted-peer]',
@@ -66,10 +67,10 @@ const cmd = command(
     '--dangerously-enable-inspector',
     'Enable remote process inspection for trusted peers. Disabled by default.'
   ),
-  flag('--debug|-d', 'Enable debug mode (more logs)'),
+  flag('--debug|-d', 'Enable debug mode (more logs).'),
   flag(
     '--max-storage|-m [int]',
-    `Max storage usage, in Mb (defaults to ${DEFAULT_STORAGE_LIMIT_MB})`
+    `Max storage usage, in Mb (defaults to ${DEFAULT_STORAGE_LIMIT_MB}).`
   ),
   flag(
     '--router-key [router-key]',
@@ -93,7 +94,7 @@ const cmd = command(
   ),
   flag(
     '--autodiscovery-service-name [autodiscovery-service-name]',
-    `Name under which to register the service (default ${SERVICE_NAME})`
+    `Name under which to register the service (default ${SERVICE_NAME}).`
   ),
   flag(
     '--scraper-public-key [scraper-public-key]',
@@ -103,14 +104,17 @@ const cmd = command(
     '--scraper-secret [scraper-secret]',
     'Secret of the dht-prometheus scraper.  Can be hex or z32.'
   ),
-  flag('--scraper-alias [scraper-alias]', '(optional) Alias with which to register to the scraper'),
+  flag(
+    '--scraper-alias [scraper-alias]',
+    '(optional) Alias with which to register to the scraper.'
+  ),
   flag(
     '--tree-cache-size [tree-cache-size]',
-    `(Advanced) tree cache size in hypercore storage. Defaults to ${DEFAULT_TREE_CACHE_SIZE}`
+    `(Advanced) tree cache size in hypercore storage. Defaults to ${DEFAULT_TREE_CACHE_SIZE}.`
   ),
   flag(
     '--log-streams',
-    '(Temporary, Advanced): enable debug logs on the UDX streams managed by the dht'
+    '(Temporary, Advanced): enable debug logs on the UDX streams managed by the dht.'
   ),
   flag(
     '--repl [repl]',
@@ -118,23 +122,23 @@ const cmd = command(
   ),
   flag(
     '--auto-shutdown-minutes [auto-shutdown-minutes]',
-    '(Temporary, Advanced) Automatically shut the process down after X minutes, with a variation of 20%'
+    '(Temporary, Advanced) Automatically shut the process down after X minutes, with a variation of 20%.'
   ),
   flag(
     '--top-k-peer-threshold [int]',
-    `(Advanced) Spike threshold for top-k tracking by peer (defaults to ${DEFAULT_TOP_K_PEER_THRESHOLD})`
+    `(Advanced) Spike threshold for top-k tracking by peer (defaults to ${DEFAULT_TOP_K_PEER_THRESHOLD}).`
   ),
   flag(
     '--top-k-referrer-threshold [int]',
-    `(Advanced) Spike threshold for top-k tracking by referrer (defaults to ${DEFAULT_TOP_K_REFERRER_THRESHOLD})`
+    `(Advanced) Spike threshold for top-k tracking by referrer (defaults to ${DEFAULT_TOP_K_REFERRER_THRESHOLD}).`
   ),
   flag(
     '--push-notifications-rate-limit-capacity [int]',
-    `(Advanced) capacity for the push notifications rate limit (defaults to ${DEFAULT_PUSH_NOTIF_RATE_LIMIT_CAPACITY})`
+    `(Advanced) capacity for the push notifications rate limit (defaults to ${DEFAULT_PUSH_NOTIF_RATE_LIMIT_CAPACITY}).`
   ),
   flag(
     '--push-notifications-rate-limit-interval [int]',
-    `(Advanced) interval in ms for the push notifications rate limit (defaults to ${DEFAULT_PUSH_NOTIF_RATE_LIMIT_INTERVAL})`
+    `(Advanced) interval in ms for the push notifications rate limit (defaults to ${DEFAULT_PUSH_NOTIF_RATE_LIMIT_INTERVAL}).`
   ),
   flag(
     '--per-referrer-rate-limit-capacity [int]',
@@ -144,10 +148,18 @@ const cmd = command(
     '--per-referrer-rate-limit-interval [int]',
     '(Advanced) refill interval in ms for the per-referrer add-cores rate limit. Must be used with --per-referrer-rate-limit-capacity.'
   ),
-  flag('--control-socket [path]', 'Listen for Kubernetes exec-probe control RPCs on this socket'),
+  flag('--control-socket [path]', 'Listen for Kubernetes exec-probe control RPCs on this socket.'),
   flag(
     '--enable-buffer-pool',
     '(Advanced, temporary flag) enable using buffer slabs from a global pool.'
+  ),
+  flag(
+    '--metrics-client-name [metrics-client-name]',
+    '(Advanced) Client name from the connection handshake, to expose as a metrics label. Other names are labeled "other". Can be more than 1.'
+  ).multiple(),
+  flag(
+    '--metrics-max-client-versions [int]',
+    `(Advanced) max unique client versions tracked per client name in metrics labels, later versions are labeled "other" (defaults to ${DEFAULT_METRICS_MAX_CLIENT_VERSIONS}).`
   ),
   readinessProbeCommand,
   async function ({ flags }) {
@@ -211,6 +223,20 @@ const cmd = command(
         }
       : null
 
+    if (flags.metricsMaxClientVersions && flags.metricsClientName === undefined) {
+      throw new Error('--metrics-client-name must be set to use --metrics-max-client-versions')
+    }
+    const metricsOpts = flags.metricsClientName
+      ? {
+          allowedClientNames: flags.metricsClientName,
+          maxUniqueClientVersions: parseInt(
+            flags.metricsMaxClientVersions || DEFAULT_METRICS_MAX_CLIENT_VERSIONS,
+            10
+          )
+        }
+      : null
+    if (metricsOpts) logger.info({ metricsOpts }, 'Metrics client labels enabled')
+
     const adminRpcRouter = new ProtomuxRPCRouter()
     adminRpcRouter.use(
       defaultMiddleware({
@@ -235,6 +261,7 @@ const cmd = command(
         rateLimit: pushNotifRateLimit
       },
       perReferrerRateLimitParams,
+      metricsOpts,
       topK: {
         bucketCount: 6,
         bucketTime: 10_000,
@@ -561,7 +588,6 @@ const cmd = command(
         'Push gateway public keys'
       )
     }
-
     let instrumentation = null
     goodbye(async () => {
       if (instrumentation) {
