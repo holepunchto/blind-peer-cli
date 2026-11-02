@@ -632,9 +632,7 @@ const cmd = command(
 
       if (debug) {
         logger.debug({ publicKey }, 'Opened connection')
-        conn.on('close', () =>
-          logger.debug({ ...getHandshake(conn), publicKey }, 'Closed connection')
-        )
+        conn.on('close', () => logger.debug({ publicKey }, 'Closed connection'))
       }
     })
 
