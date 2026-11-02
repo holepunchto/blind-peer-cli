@@ -642,21 +642,25 @@ const cmd = command(
     blindPeer.swarm.on('ban', (peerInfo, err) => {
       logger.warn({ publicKey: idEnc.normalize(peerInfo.publicKey), err }, 'Banned peer')
     })
-    if (debug) {
-      blindPeer.swarm.on('connection', (conn, peerInfo) => {
-        const log = { ...getHandshake(conn), publicKey: idEnc.normalize(peerInfo.publicKey) }
-        logger.debug(log, 'Opened connection')
-        conn.on('close', () => logger.debug(log, 'Closed connection'))
-        conn.on('warning', (err) => logger.debug({ ...log, err }, 'Connection warning'))
-        conn.on('error', (err) => {
-          if (err.code === 'ECONNRESET') {
-            logger.debug({ ...log, err }, 'Connection error')
-            return
-          }
-          logger.info({ ...log, err }, 'Connection error')
-        })
-      })
-    }
+
+    blindPeer.swarm.on('connection', (conn, peerInfo) => {
+      const publicKey = idEnc.normalize(peerInfo.publicKey)
+      const onerror = (msg) => (err) => {
+        if (err.code === 'ECONNRESET') {
+          logger.debug({ ...getHandshake(conn), publicKey, err }, msg)
+          return
+        }
+        logger.info({ ...getHandshake(conn), publicKey, err }, msg)
+      }
+
+      conn.on('warning', onerror('Connection warning'))
+      conn.on('error', onerror('Connection error'))
+
+      if (debug) {
+        logger.debug({ publicKey }, 'Opened connection')
+        conn.on('close', () => logger.debug({ publicKey }, 'Closed connection'))
+      }
+    })
 
     if (logStreams) {
       logger.warn('Advanced debugging option log-streams enabled')
