@@ -384,12 +384,7 @@ const cmd = command(
             discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
             roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey),
             runtime,
-            ...(debug
-              ? {
-                  payloadVersion: payload.version,
-                  payload: b4a.toString(payload.payload, 'base64')
-                }
-              : {})
+            ...(debug ? { payload: b4a.toString(payload.payload, 'base64') } : {})
           },
           'Notification sent'
         )
