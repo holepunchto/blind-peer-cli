@@ -647,7 +647,7 @@ const cmd = command(
     blindPeer.swarm.on('connection', (conn, peerInfo) => {
       const publicKey = idEnc.normalize(peerInfo.publicKey)
       const onerror = (msg) => (err) => {
-        if (err.code === 'ECONNRESET') {
+        if (err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT') {
           logger.debug({ ...getHandshake(conn), publicKey, err }, msg)
           return
         }
