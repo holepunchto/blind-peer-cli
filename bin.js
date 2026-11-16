@@ -456,6 +456,20 @@ const cmd = command(
         logger.info(e, 'Invalid add-core request received')
       }
     })
+    blindPeer.on('unknown-core-readded', (record, stream) => {
+      try {
+        logger.warn(
+          {
+            ...getHandshake(stream),
+            publicKey: streamToStr(stream),
+            ...recordToLog(record)
+          },
+          'Repaired core in corestore but missing from db'
+        )
+      } catch (e) {
+        logger.warn(e, 'Failed to log unknown-core-readded')
+      }
+    })
     blindPeer.on('delete-blocked', (stream, { key }) => {
       logger.info(
         {
