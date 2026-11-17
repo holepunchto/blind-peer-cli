@@ -275,18 +275,18 @@ const cmd = command(
       logger.warn(e, 'Error while flushing the db')
     })
     blindPeer.on('notification-error', async (e, connection, request) => {
-      const handshake = getHandshake(connection)
-      logger.warn(
-        {
-          ...handshake,
-          roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey),
-          publicKey: streamToStr(connection),
-          err: e
-        },
-        'Notification error'
-      )
-      if (flags.debug) {
-        try {
+      try {
+        const handshake = getHandshake(connection)
+        logger.warn(
+          {
+            ...handshake,
+            roomDiscoveryKey: b4a.toString(request.destination.discoveryKey, 'hex'),
+            publicKey: streamToStr(connection),
+            err: e
+          },
+          'Notification error'
+        )
+        if (flags.debug) {
           logger.debug(
             {
               ...handshake,
@@ -345,9 +345,9 @@ const cmd = command(
             }
             logger.debug({ ...handshake, record: recordJson }, 'Notification error: core record')
           }
-        } catch (e) {
-          logger.warn(e, 'Notification error: debug failed')
         }
+      } catch (e) {
+        logger.warn(e, 'Failed to log notification error')
       }
     })
     blindPeer.on('notification-error-snapshot', (snapshot) => {
@@ -365,7 +365,7 @@ const cmd = command(
             publicKey: streamToStr(stream),
             blockIndex: request.block.index,
             discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
-            roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey)
+            roomDiscoveryKey: b4a.toString(request.destination.discoveryKey, 'hex')
           },
           'Notification request received'
         )
@@ -382,7 +382,7 @@ const cmd = command(
             publicKey: streamToStr(stream),
             blockIndex: request.block.index,
             discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
-            roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey),
+            roomDiscoveryKey: b4a.toString(request.destination.discoveryKey, 'hex'),
             runtime,
             ...(debug ? { payload: b4a.toString(payload.payload, 'base64') } : {})
           },
