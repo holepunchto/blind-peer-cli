@@ -365,7 +365,7 @@ const cmd = command(
             publicKey: streamToStr(stream),
             blockIndex: request.block.index,
             discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
-            roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey)
+            roomDiscoveryKey: b4a.toString(request.destination.discoveryKey, 'hex')
           },
           'Notification request received'
         )
@@ -382,7 +382,7 @@ const cmd = command(
             publicKey: streamToStr(stream),
             blockIndex: request.block.index,
             discoveryKey: idEnc.normalize(hypCrypto.discoveryKey(request.block.key)),
-            roomDiscoveryKey: idEnc.normalize(request.destination.discoveryKey),
+            roomDiscoveryKey: b4a.toString(request.destination.discoveryKey, 'hex'),
             runtime,
             ...(debug ? { payload: b4a.toString(payload.payload, 'base64') } : {})
           },
